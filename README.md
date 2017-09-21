@@ -78,7 +78,7 @@ class MyMeasurement(pysweep.BaseMeasurement):
 
 ## Hardware Triggering
 
-Consider a measurement where we sweep a gate voltage over consecutive values and at each voltage we send a trigger signal to a measurement device to measure a source drain current. We propose the following schema to define such a measurement: 
+Consider a measurement where we sweep a gate voltage over consecutive values and at each voltage we send a trigger signal to a measurement device to measure a source drain current. The measurement device will use an internal buffer to store the measured value. We want to read out the internal buffer in one go when either we are at the end of our measurement, or when the buffer is full. We propose the following schema to define such a measurement: 
 
 ```python
 class MyMeasurement(pysweep.BaseMeasurement):
@@ -93,7 +93,7 @@ class MyMeasurement(pysweep.BaseMeasurement):
                     "set_function": some.instrument.set,
                     "values": iterable_values, 
                     "at_each": {
-                        "function": cool_instrument.trigger
+                        "function": measurement_instrument.trigger
                     }
                 },
                 "gate2": {
@@ -101,7 +101,7 @@ class MyMeasurement(pysweep.BaseMeasurement):
                     "set_function": other.instrument.set,
                     "values": generator_values, 
                     "at_end": {
-                        "function": cool_instrument.force_read
+                        "function": measurement_instrument.force_read
                         "args": (True,)
                     }
                 }
@@ -109,7 +109,7 @@ class MyMeasurement(pysweep.BaseMeasurement):
             "dependent_variables": {
                 "source_drain": {
                     "unit": "A",
-                    "get_function": cool_instrument.read_buffer
+                    "get_function": measurement_instrument.read_buffer
                 }
             }
         }
@@ -119,3 +119,13 @@ class MyMeasurement(pysweep.BaseMeasurement):
     def cleanup(self, namespace):
         some.instrument.set(0)
 ```
+In the inner loop we send a trigger for each voltage we set on gate 1. We then want to aqcuire the dependent variables and call read buffer. This function should return the string "delayed_N" until either a "force_read" flag becomes true, or if the number of triggers recieved is equal to the buffer size. Here N is any positive integer. When a buffer is read out, the values returned will have the following format: 
+
+```python
+{
+    "delayed_0": 2.3E-4,
+    "delayed_1": 2.2E-4
+    ...
+}
+```
+The delayed values will retroactively be filled in 
