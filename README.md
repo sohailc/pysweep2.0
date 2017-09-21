@@ -45,33 +45,37 @@ We however also need some way of defining the measurement setup and cleanup. The
 
 ```python
 class MyMeasurement(pysweep.BaseMeasurement):
-	def setup(self):
-		some.instrument.set(0)
-		
-	def measure(self, namespace):
-		measurement_table = {
-			"independent_variables": {
-				"gate1": {
-					"unit": "V",
-					"set_function": some.instrument.set, 
-					"values": iterable_values
-				},
-				"gate2": {
-					"unit": "V",
-					"set_function": other.instrument.set, 
-					"values": generator_values
-				}
-			},
-			"dependent_variables": {
-				"source_drain": {
-					"unit": "A", 
-					"get_function": yet_another.instrument.get
-				}
-			}
-		}
-	
-  		return measurement_table
-	
-	def cleanup(self, namespace):
-		some.instrument.set(0)
+    def setup(self):
+        some.instrument.set(0)
+
+    def measure(self, namespace):
+        measurement_table = {
+            "independent_variables": {
+                "gate1": {
+                    "unit": "V",
+                    "set_function": some.instrument.set,
+                    "values": iterable_values
+                },
+                "gate2": {
+                    "unit": "V",
+                    "set_function": other.instrument.set,
+                    "values": generator_values
+                }
+            },
+            "dependent_variables": {
+                "source_drain": {
+                    "unit": "A",
+                    "get_function": yet_another.instrument.get
+                }
+            }
+        }
+
+        return measurement_table
+
+    def cleanup(self, namespace):
+        some.instrument.set(0)
 ```
+
+## Hardware Triggering
+
+Consider a measurement where we sweep a gate voltage over consecutive values and at each voltage we send a trigger signal to a measurement device to measure a source drain current. We propose the following schema to define such a measurement:  
