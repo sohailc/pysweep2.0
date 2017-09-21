@@ -49,28 +49,29 @@ class MyMeasurement(pysweep.BaseMeasurement):
 		some.instrument.set(0)
 		
 	def measure(self, namespace):
-  measurement_table = {
-   "independent_variables": {
-     "gate1": {
-       "unit": "V",
-       "set_function": some.instrument.set, 
-       "values": iterable_values
-      }
-      "gate2": {
-         "unit": "V",
-         "set_function": other.instrument.set, 
-         "values": generator_values
-      }
-    },
-    "dependent_variables": {
-     "source_drain": {
-     "unit": "A", 
-     "get_function": yet_another.instrument.get
-     }
-    }
-  }
+		measurement_table = {
+			"independent_variables": {
+				"gate1": {
+					"unit": "V",
+					"set_function": some.instrument.set, 
+					"values": iterable_values
+				},
+				"gate2": {
+					"unit": "V",
+					"set_function": other.instrument.set, 
+					"values": generator_values
+				}
+			},
+			"dependent_variables": {
+				"source_drain": {
+					"unit": "A", 
+					"get_function": yet_another.instrument.get
+				}
+			}
+		}
 	
-  return measurement_table
+  		return measurement_table
+	
 	def cleanup(self, namespace):
 		some.instrument.set(0)
 ```
