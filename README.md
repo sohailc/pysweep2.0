@@ -1,6 +1,6 @@
 # PySweep 2.0 interface and design decisions
 ## Introduction
-PySweep is a framework intended to be used on top of qcodes [QCoDeS](https://github.com/QCoDeS/Qcodes) in order to define measurements flexibly. At the most general level, a measurement has dependent and independant variables with setup and clean up methods. These need to be specified somehow. We intend the following structure:  
+PySweep is a framework intended to be used on top of qcodes [QCoDeS](https://github.com/QCoDeS/Qcodes) in order to define measurements flexibly. At the most general level, a measurement has dependent and independant variables with setup and clean up methods. These need to be specified somehow. We propose the following structure:  
 
 ```python 
  measurement_table = {
