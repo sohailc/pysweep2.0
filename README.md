@@ -211,7 +211,9 @@ from pysweep import Measurement
 my_measurement = Measurement(
  setup_function, 
  cleanup_function, 
- SweepObject(powersource.channel[0], np.linspace(0, 1, 100)).at_each(send_trigger).at_end(instrument.force_buffer_read), 
+ SweepObject(powersource.channel[0], np.linspace(0, 1, 100))
+  .at_each(send_trigger)
+  .at_end(instrument.force_buffer_read), 
  [instrument.read_buffer]
 )
 ```
