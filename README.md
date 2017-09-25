@@ -215,5 +215,7 @@ By default, measurements are saved in the JSON format. However, we can specify a
 # TODO
 
 make description optional
+
 it should be able to determine if a measrement is running 
+
 sweeps should be able to influence each other
