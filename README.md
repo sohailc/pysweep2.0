@@ -12,7 +12,7 @@ my_measurement = Measurement(
  [measurement_function1, measurement_function2, ...]
 )
 
-my_measurement.run("some_descriptive_name", "some succinct description").export_as("gnu_plot")
+my_measurement.run("some_descriptive_name", "some succinct description", export_as="gnu_plot")
 ```
 
 Let's go through the arguments of the Measurement class one by one. 
@@ -100,7 +100,7 @@ sweep_product = SweepProduct([
  SweepObject(qcodes_parameter2, iterable2)
 ])
 ```
-The complete signature of the at_start, at_end and at_each: "at_each(callable, args)" where args is an optional tuple. 
+The complete signature of the at_start, at_end and at_each: "at_each(callable, args)" where args is an optional tuple. These functions return a SweepObject so that we can do "SweepObject().at_each().at_end()". 
 
 ### More complex sweeping operation with e.g. feedback
 
@@ -202,7 +202,12 @@ from pysweep import Measurement
 my_measurement = Measurement(
  setup_function, 
  cleanup_function, 
- SweepObject(powersource.channel[0], np.linspace(0, 1, 100)).at_each(send_trigger).at_end(buffered_instrument.force_buffer_read), 
- [buffered_instrument.read_buffer]
+ SweepObject(powersource.channel[0], np.linspace(0, 1, 100)).at_each(send_trigger).at_end(instrument.force_buffer_read), 
+ [instrument.read_buffer]
 )
 ```
+By calling the "force_buffer_read" method we are instructing the instrument to read the buffer even if it is not full. 
+
+# Exporting measurements to files
+
+By default, measurements are saved in the JSON format. However, we can specify another format with the "export_as" keyword argument. For instance, export_as="gnu_plot" will save in a format which is compatible with the [GNU plot](http://www.gnuplot.info/) utility. This is important for users using the [Spyview](http://nsweb.tn.tudelft.nl/~gsteele/spyview/) program. The files will be written concurrently with the measurements, ensuring that if a measurement encounters an exception, data will still be saved. However, values will only be saved to file once every delayed value is known as plotters like GNU plot and Spyview will not know how to interprete strings like "delayed_<number>".  
