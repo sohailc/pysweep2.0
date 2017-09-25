@@ -3,7 +3,10 @@
 PySweep is a framework intended to be used on top of qcodes [QCoDeS](https://github.com/QCoDeS/Qcodes) in order to define measurements flexibly. At the most general level, a measurement has dependent and independant variables with "setup" and "clean up" methods. For different values of the independant variables, the dependant variables will be measured. In our framework we will decouple the sweeping of the independant variables, from the measurement of the dependant variables. At the most general level, a measurement in our framework looks as follows: 
 
 ```python
-from pysweep import Measurement
+from pysweep import Measurement, SpyViewExporter
+
+Measurement.default_station = station
+Measurement.default_exporter = SpyViewExporter
 
 my_measurement = Measurement(
  setup_function, 
@@ -12,10 +15,16 @@ my_measurement = Measurement(
  [measurement_function1, measurement_function2, ...]
 )
 
-my_measurement.run("some_descriptive_name", "some succinct description", export_as="gnu_plot")
+my_measurement.run(name="some_descriptive_name", description="some succinct description")
 ```
 
-Let's go through the arguments of the Measurement class one by one. 
+Let's go through the arguments of the Measurement class one by one.
+
+## Setting defaults
+
+The measurement class has default class attributes which can be set before starting any measurements.Specifically:
+1) default station: The QCoDeS station to be used in measurements
+2) default exporter: The default export format to use. The API of the exporter shall be described in section TBD 
 
 ## Measurement setup and cleanup 
 
@@ -208,13 +217,11 @@ my_measurement = Measurement(
 ```
 By calling the "force_buffer_read" method we are instructing the instrument to read the buffer even if it is not full. 
 
-# Exporting measurements to files
+## Exporting measurements to files
 
 By default, measurements are saved in the JSON format. However, we can specify another format with the "export_as" keyword argument. For instance, export_as="gnu_plot" will save in a format which is compatible with the [GNU plot](http://www.gnuplot.info/) utility. This is important for users using the [Spyview](http://nsweb.tn.tudelft.nl/~gsteele/spyview/) program. The files will be written concurrently with the measurements, ensuring that if a measurement encounters an exception, data will still be saved. However, values will only be saved to file once every delayed value is known as plotters like GNU plot and Spyview will not know how to interprete strings like "delayed_<number>".  
 
 # TODO
-
-make description optional
 
 it should be able to determine if a measrement is running 
 
