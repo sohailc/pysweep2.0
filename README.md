@@ -110,15 +110,10 @@ Consider an alternative solution to the "send a trigger at each iteration" probl
 class TriggerAtEach:
  def __init__(self, param_values):
   self._param_values = param_values
- def __iter__(self):
-  self._count = 0
-  return self
  def __next__():
-  if self._count < len(self._param_values):
-   trigger_function()
-   return self._param_values[self._count]
-  else:
-   raise StopIteration
+  nxt = next(self._param_values)
+  trigger_function()
+  return nxt
 ```
 
 And we use this as such
