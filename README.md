@@ -1,79 +1,88 @@
 # PySweep 2.0 interface and design decisions
 ## Introduction
-PySweep is a framework intended to be used on top of qcodes [QCoDeS](https://github.com/QCoDeS/Qcodes) in order to define measurements flexibly. At the most general level, a measurement has dependent and independant variables with setup and clean up methods. These need to be specified somehow. We propose the following structure:  
-
-```python 
- measurement_table = {
-  "independent_variables": {
-    "gate1": {
-      "unit": "V",
-      "set_function": some.instrument.set, 
-      "values": iterable_values
-     }
-     "gate2": {
-        "unit": "V",
-        "set_function": other.instrument.set, 
-        "values": generator_values
-     }
-  },
-  "dependent_variables": {
-    "source_drain": {
-    "unit": "A", 
-    "get_function": yet_another.instrument.get
-    }
-  }
-}
-```
-
-In the above example we have defined two independent variables. Our measurement loop therefore will be a nested loop where the first independent variable will be located in the inner most loop and will be the one which is sweeping most frequently.  
-
-We can also couple to independent variables together to get a "co-sweep" like so: 
+PySweep is a framework intended to be used on top of qcodes [QCoDeS](https://github.com/QCoDeS/Qcodes) in order to define measurements flexibly. At the most general level, a measurement has dependent and independant variables with "setup" and "clean up" methods. For different values of the independant variables, the dependant variables will be measured. In our framework we will decouple the sweeping of the independant variables, from the measurement of the dependant variables. At the most general level, a measurement in our framework looks as follows: 
 
 ```python
-"gate1, gate2" : {
- "unit": "V, V"
- "set_function": (some.instrument.set, other.instrument.set),
- "values": (iterable_values1, iterable_values2)
-}
+from pysweep import Measurement
+
+my_measurement = Measurement(
+ setup_function, 
+ cleanup_function, 
+ sweep_object, 
+ [measurement_function1, measurement_function2, ...]
+)
+
+my_measurement.run("some descriptive_name", "some succinct description")
 ```
 
-The measurement table will also ensure the proper formatting and labeling of the resulting measurement file. We note that the "values" field of indepenent variables can be iterators or generators. This will allow us to introduce considerable flexibility (for example, introduce feedback and adaptive stepping in calibration measurements). 
+Let's go through the arguments of the Measurement class one by one. 
 
 ## Measurement setup and cleanup 
 
-We however also need some way of defining the measurement setup and cleanup. The setup brings the hardware in a state making it ready to perform a measurement. This could for example be instructing a lock-in amplifier to respond to triggers when these are send or putting an oscilloscope in the correct measruement ranges. A cleanup ensure that the instruments are left in defined setting after the measurement has concluded. To enable all of this, we propose the following class definition: 
+The setup brings the hardware in a state making it ready to perform a measurement. This could for example be instructing a lock-in amplifier to respond to triggers when these are send or putting an oscilloscope in the correct measurement ranges. A cleanup ensure that the instruments are left in defined setting after the measurement has concluded. 
+
+These functions accept a single parameter as input. This parameter shall be of the type QCoDeS Station. 
+
+## SweepObject
+
+The measurement class accepts a single "sweep object" as the thrid parameter, which shall be an instance of a SweepObject class. The basic signature of the SweepObject class is as follows: 
 
 ```python
-class MyMeasurement(pysweep.BaseMeasurement):
-    def setup(self):
-        some.instrument.set(0)
+from pysweep import SweepObject
 
-    def measure(self, namespace):
-        measurement_table = {
-            "independent_variables": {
-                "gate1": {
-                    "unit": "V",
-                    "set_function": some.instrument.set,
-                    "values": iterable_values
-                },
-                "gate2": {
-                    "unit": "V",
-                    "set_function": other.instrument.set,
-                    "values": generator_values
-                }
-            },
-            "dependent_variables": {
-                "source_drain": {
-                    "unit": "A",
-                    "get_function": yet_another.instrument.get
-                }
-            }
-        }
+SweepObject(qcodes_parameter, iterable)
+```
+The second argument of SweepObject may also be a generator (or any class which implements "__next__"). 
 
-        return measurement_table
+At first glance this design seems limited in the following senses: 
+1) What if we want to sweep multiple parameters? 
+2) How do we establish feedback between a measurement and the sweep object? 
 
-    def cleanup(self, namespace):
-        some.instrument.set(0)
+We will address these concerns below
+
+### Multiple sweeping parameters
+
+We shall apply a chaining construct to implement sweeping multiple parameters. For instance, the following code shall sweep two parameters in a nested loop: 
+
+```python
+from pysweep import SweepObject, SweepProduct
+
+sweep_product = SweepProduct([
+ SweepObject(qcodes_parameter1, iterable1),
+ SweepObject(qcodes_parameter2, iterable2)
+])
+```
+
+In pseudo-code, this does approximately: 
+
+```python
+for value1 in iterable1: 
+ qcodes_parameter1.set(value1)
+ for value2 in iterable2: 
+  qcodes_parameter2.set(value2)
+  ...  # some measuement
+```
+
+The returning sweep_product is another instance of SweepObject which can be inserted into the Measurement class. 
+
+Another way to chain is to "co-sweep" two parameters: 
+
+```python
+from pysweep import SweepObject, SweepZip
+
+sweep_product = SweepZip([
+ SweepObject(qcodes_parameter1, iterable1),
+ SweepObject(qcodes_parameter2, iterable2)
+])
+```
+
+In pseudo-code, this does approximately: 
+
+```python
+for value1, value2 in zip(iterable1, iterable2): 
+ qcodes_parameter1.set(value1)
+ qcodes_parameter2.set(value2)
+ ...  # some measuement
 ```
 
 ## Hardware Triggering
