@@ -12,16 +12,16 @@ my_measurement = Measurement(
  [measurement_function1, measurement_function2, ...]
 )
 
-my_measurement.run("some descriptive_name", "some succinct description")
+my_measurement.run("some_descriptive_name", "some succinct description").export_as("gnu_plot")
 ```
 
 Let's go through the arguments of the Measurement class one by one. 
 
 ## Measurement setup and cleanup 
 
-The setup brings the hardware in a state making it ready to perform a measurement. This could for example be instructing a lock-in amplifier to respond to triggers when these are send or putting an oscilloscope in the correct measurement ranges. A cleanup ensure that the instruments are left in defined setting after the measurement has concluded. 
+The setup brings the hardware in a state making it ready to perform a measurement. This could for example be instructing a lock-in amplifier to respond to triggers when these are send or putting an oscilloscope in the correct measurement ranges. A cleanup ensure that the instruments are left in well-defined settings after the measurement has concluded. 
 
-These functions accept a single parameter as input. This parameter shall be of the type QCoDeS Station. 
+These functions accept a single parameter as input. This parameter shall be of the type QCoDeS Station. These functions do not return anything 
 
 ## SweepObject
 
@@ -139,56 +139,41 @@ my_measurement = Measurement(
 
 We will not go into implementation details, but it is not hard to program "maximum_sampler" such that the "next" value it returns depends on the measured source drain current: the steps in the gate voltage is proportional to the derivative in the source drain current. 
 
-## Hardware Triggering
+## Measurement functions
 
-Consider a measurement where we sweep a gate voltage over consecutive values and at each voltage we send a trigger signal to a measurement device to measure a source drain current. The measurement device will use an internal buffer to store the measured value. We want to read out the internal buffer in one go when either we are at the end of our measurement, or when the buffer is full. We propose the following schema to define such a measurement: 
+Let's look at the basic signature of the measurement class again: 
 
 ```python
-class MyMeasurement(pysweep.BaseMeasurement):
-    def setup(self):
-        some.instrument.set(0)
+from pysweep import Measurement
 
-    def measure(self, namespace):
-        measurement_table = {
-            "independent_variables": {
-                "gate1": {
-                    "unit": "V",
-                    "set_function": some.instrument.set,
-                    "values": iterable_values, 
-                    "at_each": {
-                        "function": measurement_instrument.trigger
-                    }
-                },
-                "gate2": {
-                    "unit": "V",
-                    "set_function": other.instrument.set,
-                    "values": generator_values, 
-                    "at_end": {
-                        "function": measurement_instrument.force_read
-                        "args": (True,)
-                    }
-                }
-            },
-            "dependent_variables": {
-                "source_drain": {
-                    "unit": "A",
-                    "get_function": measurement_instrument.read_buffer
-                }
-            }
-        }
-
-        return measurement_table
-
-    def cleanup(self, namespace):
-        some.instrument.set(0)
+my_measurement = Measurement(
+ setup_function, 
+ cleanup_function, 
+ sweep_object, 
+ [measurement_function1, measurement_function2, ...]
+)
 ```
-In the inner loop we send a trigger for each voltage we set on gate 1. We then want to aqcuire the dependent variables and call read buffer. This function should return the string "delayed_N" until either a "force_read" flag becomes true, or if the number of triggers recieved is equal to the buffer size. Here N is any positive integer. When a buffer is read out, the values returned will have the following format: 
+
+At each iteration of the sweep object each of the measurement functions will be called. Like the setup and cleanup functions, the measurement function accespts one argument: a QCoDeS Station. These functions return a dictionary, where the keys represent the name of the parameter being measured and value the measured value. The measurement class will aggregate the measured values in an internal dictionary under the same keys. For instance, if in the first iteration the measurement function returns: 
 
 ```python
 {
-    "delayed_0": 2.3E-4,
-    "delayed_1": 2.2E-4
-    ...
+ "gate_voltage [V]": 2.3
 }
 ```
-The delayed values will retroactively be filled in 
+and at the second iteration it returns: 
+```python
+{
+ "gate_voltage [V]": 4.5
+}
+```
+The internal dictionary will contain
+```python
+{
+ "gate_voltage [V]": [2.3, 4.5]
+}
+```
+
+We see that we can define multiple measurement functions. 
+
+
