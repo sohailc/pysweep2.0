@@ -341,8 +341,11 @@ Signature:
 SweepObject(qcodes_parameter, sweepvalues)
 ```
 ### Constructor arguments
-* qcodes_parameter: qcodes.instrument.Parameter
+* qcodes_parameter, qcodes.instrument.Parameter
     * Description: The parameter that needs to be swept. 
 
-* sweepvalues: list or iterable or generator or callable
+* sweepvalues, list or iterable or generator or callable
     * Description: The values which need to be set at each iteration of the measurement. If 'sweepvalues' is a callable this needs to accept two parameters: a qcodes.Station instance and a pysweep.NameSpace instance. 
+
+### Methods
+* \__next__
