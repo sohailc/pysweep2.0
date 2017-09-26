@@ -183,7 +183,7 @@ def calculate_next(station):
  return 0.01 / (0.1 + abs(dv / di))   # We want the sampling rate to be higher for higher dV/dI. 
 ```
 
-It is possible that two sweep object which are chained together with SweepProduct or SweepZip can communicate with each other via the namespace. Consider the scenario that we have two nested loops which 
+It is possible that two sweep object which are chained together with SweepProduct or SweepZip can communicate with each other via the namespace. 
 
 ## Measurement functions
 
