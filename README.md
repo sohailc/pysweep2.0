@@ -267,8 +267,8 @@ Measurement(setup, cleanup, sweep_object=None, [measurement1, measurement2, ...]
 
 ### Constructor arguments
 * setup: Callable
-         - inputs: qcodes.Station, pysweep.NameSpace 
-         - returns: None
+ * inputs: qcodes.Station, pysweep.NameSpace 
+ * returns: None
 
 
 
