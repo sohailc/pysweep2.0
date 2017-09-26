@@ -183,11 +183,22 @@ Where we define "gate_values" as
 ```python
 def gate_values(station, namespace):
  start_value = 0.2  #[V]
- end_value = 0.8
+ end_value = 0.8 #[V]
  current_value = start_value
  while current_value < end_value:
   yield current_value
   current_value += calculate_next(station)  # Use the station to calculate an updated value for the gate
+  
+def calculate_next(station):
+ sd_current = station.source_drain()
+ gate_voltage = station.gate()
+ 
+ # Measure dV/dI
+ di = 0.1
+ station.source_drain(sd_current + di)
+ dv = station.gate() - gate_voltage
+ 
+ return 0.01 / (dv / di)   # The higher dV/dI, the closer we want to sample. 
 ```
 
 ## Measurement functions
