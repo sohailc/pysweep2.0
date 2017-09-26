@@ -271,7 +271,12 @@ Measurement(setup, cleanup, sweep_object=None, [measurement1, measurement2, ...]
         * qcodes.Station
         * pysweep.NameSpace 
     * returns: None
+    * Description: Puts the station is a state ready for a measurement
 
-
-
+* cleanup: Callable
+    * inputs: 
+        * qcodes.Station
+        * pysweep.NameSpace 
+    * returns: None
+    * Description: Puts the stations in a well defined state after a measurement
 
