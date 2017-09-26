@@ -22,15 +22,50 @@ Let's go through the arguments of the Measurement class one by one.
 
 ## Setting defaults
 
-The measurement class has default class attributes which can be set before starting any measurements.Specifically:
+The measurement class has default class attributes which can be set before starting any measurements. Specifically:
 1) default station: The QCoDeS station to be used in measurements
-2) default exporter: The default export format to use. The API of the exporter shall be described in section TBD 
+2) default exporter: The default export format to use. The API of the exporter shall be described in section TBD. In the first version of pysweep 2.0 we shall have at least the SpyView exporter which will enable users to export to an ascii file compatible with the [Spyview](http://nsweb.tn.tudelft.nl/~gsteele/spyview/) program 
 
 ## Measurement setup and cleanup 
 
 The setup brings the hardware in a state making it ready to perform a measurement. This could for example be instructing a lock-in amplifier to respond to triggers when these are send or putting an oscilloscope in the correct measurement ranges. A cleanup ensure that the instruments are left in well-defined settings after the measurement has concluded. 
 
-These functions accept a single parameter as input. This parameter shall be of the type QCoDeS Station. These functions do not return anything 
+These functions accept a two parameter as input, the first of type QCoDeS Station and the second shall be an instance of pysweep.NameSpace. The setup and cleanup functions do not return anything. 
+
+## pysweep.NameSpace
+
+The pysweep namespace object is simply defined as 
+
+```python
+class NameSpace:
+ pass
+```
+and at first glance seems rather useless. What we can do with the namespace is for example the following: 
+
+```python
+>>> namespace = pysweep.NameSpace
+>>> namespace.a = 1
+>>> namespace.f = lambda x: x**2
+>>> print(namespace.a)
+1
+>>> print(namespace.f(4))
+16
+```
+
+All setup, cleanup and measurement functions shall accept a namespace as second argument. This will allow communication between these function. 
+
+### The motivation for using namespaces
+
+One might wonder why we are using namespaces for communication between functions. Why not make these function class methods, as the pythonic namespace available will be "self"? However, if the setup, cleanup and measurement functions would be class methods of a single instance then these methods will be coupled to each other. Let us suppose that we have two measurements, each with its own setup, measure and cleanup function: 
+
+Measurement 1 = setup1, measure1, cleanup1 
+Measurement 2 = setup2, measure2, cleanup2 
+
+Now lets suppose that we want to define a third measurement which combines the two pervious onces: 
+
+Measurement 3 = setup1, measure2, cleanup3 
+
+There is no way to reuse code for the third measurement if the functions involved are class methods. Our design with namespaces allows us to mix and match setup, measure and cleanup functions to our hearts content :-)
 
 ## SweepObject
 
