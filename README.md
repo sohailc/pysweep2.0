@@ -267,6 +267,9 @@ The pysweep module shall have the following class and function definitions:
 
 * SweepObject: class
     * Description: Responsible for setting the independant variables in a measurement
+    
+* BasePysweepExporter: class
+    * Description: The base class of a exporter which writes an internal measurement dictionary to a file
 
 * SpyViewExporter: class 
     * Description: Exports the internal measurement dictionary to a spyview file 
@@ -295,15 +298,15 @@ Measurement(setup, cleanup, sweep_object=None, [measurement1, measurement2, ...]
 * setup: Callable
     * Description: Callable to the station is a state ready for a measurement
     * inputs: 
-        * qcodes.Station
-        * pysweep.NameSpace 
+        * station, qcodes.Station
+        * namespace, pysweep.NameSpace
     * returns: None
 
 * cleanup: Callable
     * Description: Callable to put the station in a well defined state after a measurement
     * inputs: 
-        * qcodes.Station
-        * pysweep.NameSpace 
+        * station, qcodes.Station
+        * namespace, pysweep.NameSpace
     * returns: None
 
 * sweep_object: pysweep.SweepObject, optional
@@ -312,6 +315,21 @@ Measurement(setup, cleanup, sweep_object=None, [measurement1, measurement2, ...]
 * measurement_list: list, callable
     * Description: A list of callables 
     * inputs: 
-        * qcodes.Station
-        * pysweep.NameSpace
+        * station, qcodes.Station
+        * namespace, pysweep.NameSpace
     * returns: dictionary
+
+### Public methods
+* run
+    * Description: run the measurement
+    * Inputs: 
+        * name, string
+        * description, string
+    * Returns: None
+
+### Public class attributes
+* default_station, qcodes.Station
+    * Description: The station instance to be used when creating a measurement instance
+
+* default_exporter, PySweepExporter 
+    * Description: The default exporter to be used. 
