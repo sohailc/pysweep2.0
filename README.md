@@ -256,12 +256,10 @@ my_measurement = Measurement(
 ```
 By calling the "force_buffer_read" method we are instructing the instrument to read the buffer even if it is not full. 
 
-## Exporting measurements to files
+# API 
 
-By default, measurements are saved in the JSON format. However, we can specify another format with the "export_as" keyword argument. For instance, export_as="gnu_plot" will save in a format which is compatible with the [GNU plot](http://www.gnuplot.info/) utility. This is important for users using the [Spyview](http://nsweb.tn.tudelft.nl/~gsteele/spyview/) program. The files will be written concurrently with the measurements, ensuring that if a measurement encounters an exception, data will still be saved. However, values will only be saved to file once every delayed value is known as plotters like GNU plot and Spyview will not know how to interprete strings like "delayed_<number>".  
-
-# TODO
-
-it should be able to determine if a measrement is running 
-
-sweeps should be able to influence each other
+|   |   |   |   |   |
+|---|---|---|---|---|
+|   |   |   |   |   |
+|   |   |   |   |   |
+|   |   |   |   |   |
