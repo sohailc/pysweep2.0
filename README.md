@@ -147,25 +147,22 @@ sweep_product = SweepProduct([
 ```
 The complete signature of the at_start, at_end and at_each: "at_each(callable, args)" where args is an optional tuple. These functions return a SweepObject so that we can do "SweepObject().at_each().at_end()". 
 
-### More complex sweeping operation with e.g. feedback
+### More complex sweeping operation with e.g. with adaptive stepping
 
 Consider an alternative solution to the "send a trigger at each iteration" problem: 
 
 ```python
-class TriggerAtEach:
- def __init__(self, param_values):
-  self._param_values = param_values
- def __next__():
-  nxt = next(self._param_values)
+def trigger_at_each(param_values):
+ for value in param_values:
   trigger_function()
-  return nxt
+  yield value
 ```
 
 And we use this as such
 
 ```python
 sweep_product = SweepProduct([
- SweepObject(qcodes_parameter1, TriggerAtEach(iterable1)),
+ SweepObject(qcodes_parameter1, trigger_at_each(iterable1)),
  SweepObject(qcodes_parameter2, iterable2)
 ])
 ```
@@ -173,16 +170,25 @@ sweep_product = SweepProduct([
 This is obviously much less elegant and more complex. However, the basic idea will allow us to perform complex sweeps. Consider for example a situation where a measurement function sweeps a gate voltage and measures a source-drain current. There is an unknown gate voltage at which there is a maximum in the source drain current and we would like to sample more closely around this peak in gate-space. A measurement such as this might look as follows: 
 
 ```python
-
 my_measurement = Measurement(
  setup_function, 
  cleanup_function, 
- SweepObject(station.keithley.channel[0], maximum_sampler), 
- [maximum_sampler.measure_source_drain]
+ SweepObject(station.gate, gate_values), 
+ [measure_source_drain]
 )
 ```
 
-We will not go into implementation details, but it is not hard to program "maximum_sampler" such that the "next" value it returns depends on the measured source drain current: the steps in the gate voltage is proportional to the derivative in the source drain current. 
+Where we define "gate_values" as 
+
+```python
+def gate_values(station, namespace):
+ start_value = 0.2  #[V]
+ end_value = 0.8
+ current_value = start_value
+ while current_value < end_value:
+  yield current_value
+  current_value += calculate_next(station)  # Use the station to calculate an updated value for the gate
+```
 
 ## Measurement functions
 
