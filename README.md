@@ -260,6 +260,6 @@ By calling the "force_buffer_read" method we are instructing the instrument to r
 
 |   |   |   |   |   |
 |---|---|---|---|---|
-|   |   |   |   |   |
-|   |   |   |   |   |
-|   |   |   |   |   |
+|---|---|---|---|---|
+|---|---|---|---|---|
+|---|---|---|---|---|
