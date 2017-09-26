@@ -348,4 +348,4 @@ SweepObject(qcodes_parameter, sweepvalues)
     * Description: The values which need to be set at each iteration of the measurement. If 'sweepvalues' is a callable this needs to accept two parameters: a qcodes.Station instance and a pysweep.NameSpace instance. 
 
 ### Methods
-* \__next__
+* \_\_next\_\_
