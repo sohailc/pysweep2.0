@@ -258,19 +258,11 @@ By calling the "force_buffer_read" method we are instructing the instrument to r
 
 # API 
 
-## Functions
+## Measurement
 
-|__Function__|__args__                     |__return values__|
-|------------|-----------------------------|-----------------|
-|setup       | station: qcodes.Station     | None            |
-|            | namespace: pysweep.NameSpace|                 |
+### Constructor arguments
+* setup: Callable, inputs: qcodes.Station, pysweep.NameSpace returns: None
 
-|__Function__|__args__                     |__return values__|
-|------------|-----------------------------|-----------------|
-|cleanup     | station: qcodes.Station     | None            |
-|            | namespace: pysweep.NameSpace|                 |
 
-|__Function__|__args__                     |__return values__                                                  |
-|------------|-----------------------------|-------------------------------------------------------------------|
-|measurement | station: qcodes.Station     | dictionary, containing the measurement names (key) and measured values (value)|
-|            | namespace: pysweep.NameSpace|  |
+
+
