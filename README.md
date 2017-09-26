@@ -349,5 +349,29 @@ SweepObject(qcodes_parameter, sweepvalues)
 
 ### Methods
 * \_\_next\_\_
-    * Description: A sweep object is an iterable, which means we can loop over a sweep object. Everytime \_\_next\_\_ is called, the sweep object shall return a dictionary in the format {<independant_parameter_name_1>: <value>, <independant_parameter_name_2>: <value>, ...} 
+    * Description: A sweep object is an iterable, which means we can loop over a sweep object. Everytime \_\_next\_\_ is called, the sweep object shall return a dictionary in which the keys represent the independant parameter names and the values the new values of these parameters. Even though the constructor of the SweepObject class accepts one parameter sweep objects can be chained, which gives us a new sweep object which can set multiple parameters
+
+* at_start
+    * Description: Give a function to be executed at the start of a sweep
+    * Inputs: 
+        * function, callable
+        * args, list, optional, arguments to be given to the function
+        * kwargs, dict, optional, keyword arguments to be given to the function
+    * Returns: SweepObject
+
+* at_each
+    * Description: Give a function to be executed at each iteration of the sweep
+    * Inputs: 
+        * function, callable
+        * args, list, optional, arguments to be given to the function
+        * kwargs, dict, optional, keyword arguments to be given to the function
+    * Returns: SweepObject
+    
+* at_end
+    * Description: Give a function to be executed at the end of the sweep
+    * Inputs: 
+        * function, callable
+        * args, list, optional, arguments to be given to the function
+        * kwargs, dict, optional, keyword arguments to be given to the function
+    * Returns: SweepObject
 
