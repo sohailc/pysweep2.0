@@ -349,8 +349,5 @@ SweepObject(qcodes_parameter, sweepvalues)
 
 ### Methods
 * \_\_next\_\_
-    * Description: A sweep object is an iterable, which means we can apply the following syntax: ```python
-for value in SweepObject(qcodes_parameter, sweepvalues): 
-    ...
-```
+    * Description: A sweep object is an iterable, which means we can loop over a sweep object. Everytime \_\_next\_\_ is called, the sweep object shall return a dictionary in the format {<independant_parameter_name_1>: <value>, <independant_parameter_name_2>: <value>, ...} 
 
