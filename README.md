@@ -280,3 +280,6 @@ Measurement(setup, cleanup, sweep_object=None, [measurement1, measurement2, ...]
     * returns: None
     * Description: Puts the stations in a well defined state after a measurement
 
+* sweep_object: pysweep.SweepObject, optional
+    * Description: This object is responsible for setting the independant variables during a measurement. If no parameters are swept during a measurement (e.g. all sweeping is done by hardware), this parameter can be None. 
+
