@@ -258,7 +258,12 @@ By calling the "force_buffer_read" method we are instructing the instrument to r
 
 # API 
 
-## Measurement(setup, cleanup, sweep_object=None, [measurement1, measurement2, ...])
+## Measurement
+
+Signature: 
+```
+Measurement(setup, cleanup, sweep_object=None, [measurement1, measurement2, ...])
+```
 
 ### Constructor arguments
 * setup: Callable, inputs: qcodes.Station, pysweep.NameSpace returns: None
