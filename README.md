@@ -58,13 +58,14 @@ All setup, cleanup and measurement functions shall accept a namespace as second 
 
 One might wonder why we are using namespaces for communication between functions. Why not make these function class methods, as the pythonic namespace available will be "self"? However, if the setup, cleanup and measurement functions would be class methods of a single instance then these methods will be coupled to each other. Let us suppose that we have two measurements, each with its own setup, measure and cleanup function: 
 
+```
 Measurement 1 = setup1, measure1, cleanup1 
 Measurement 2 = setup2, measure2, cleanup2 
-
+```
 Now lets suppose that we want to define a third measurement which combines the two pervious onces: 
-
+```
 Measurement 3 = setup1, measure2, cleanup3 
-
+```
 There is no way to reuse code for the third measurement if the functions involved are class methods. Our design with namespaces allows us to mix and match setup, measure and cleanup functions to our hearts content :-)
 
 ## SweepObject
