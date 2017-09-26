@@ -258,6 +258,32 @@ By calling the "force_buffer_read" method we are instructing the instrument to r
 
 # API 
 
+## pysweep module
+
+The pysweep module shall have the following class and function definitions: 
+
+* Measurement: class
+    * Description: Responsible for measurements 
+
+* SweepObject: class
+    * Description: Responsible for setting the independant variables in a measurement
+
+* SpyViewExporter: class 
+    * Description: Exports the internal measurement dictionary to a spyview file 
+    
+* NameSpace: class
+    * Description: Useful for providing a local namesapce 
+
+* SweepProduct: function
+    * Description: Chain a list of sweep objects to create a nested loop of arbitrary depth
+    * Inputs: list, SweepObject
+    * Returns: SweepObject
+
+* SweepZip: function
+    * Description: Chain a list of sweep objects to create co-sweeping loops
+    * Inputs: list, SweepObject
+    * Returns: SweepObject
+
 ## Measurement
 
 Signature: 
@@ -267,19 +293,25 @@ Measurement(setup, cleanup, sweep_object=None, [measurement1, measurement2, ...]
 
 ### Constructor arguments
 * setup: Callable
+    * Description: Callable to the station is a state ready for a measurement
     * inputs: 
         * qcodes.Station
         * pysweep.NameSpace 
     * returns: None
-    * Description: Puts the station is a state ready for a measurement
 
 * cleanup: Callable
+    * Description: Callable to put the station in a well defined state after a measurement
     * inputs: 
         * qcodes.Station
         * pysweep.NameSpace 
     * returns: None
-    * Description: Puts the stations in a well defined state after a measurement
 
 * sweep_object: pysweep.SweepObject, optional
-    * Description: This object is responsible for setting the independant variables during a measurement. If no parameters are swept during a measurement (e.g. all sweeping is done by hardware), this parameter can be None. 
+    * Description: This object is responsible for setting the independant variables during a measurement. If no parameters are swept during a measurement (e.g. all sweeping is done by hardware), this parameter can be None. For a complete description, see the API of this class described elsewhere in this document. 
 
+* measurement_list: list, callable
+    * Description: A list of callables 
+    * inputs: 
+        * qcodes.Station
+        * pysweep.NameSpace
+    * returns: dictionary
