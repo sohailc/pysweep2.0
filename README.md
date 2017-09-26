@@ -149,25 +149,7 @@ The complete signature of the at_start, at_end and at_each: "at_each(callable, a
 
 ### More complex sweeping operation with e.g. with adaptive stepping
 
-Consider an alternative solution to the "send a trigger at each iteration" problem: 
-
-```python
-def trigger_at_each(param_values):
- for value in param_values:
-  trigger_function()
-  yield value
-```
-
-And we use this as such
-
-```python
-sweep_product = SweepProduct([
- SweepObject(qcodes_parameter1, trigger_at_each(iterable1)),
- SweepObject(qcodes_parameter2, iterable2)
-])
-```
-
-This is obviously much less elegant and more complex. However, the basic idea will allow us to perform complex sweeps. Consider for example a situation where a measurement function sweeps a gate voltage and measures a source-drain current. There is an unknown gate voltage at which there is a maximum in the source drain current and we would like to sample more closely around this peak in gate-space. A measurement such as this might look as follows: 
+Consider for example a situation where a measurement function sweeps a gate voltage and measures a source-drain current. There is an unknown gate voltage at which there is a maximum in the source drain current and we would like to sample more closely around this peak in gate-space. A measurement such as this might look as follows: 
 
 ```python
 my_measurement = Measurement(
