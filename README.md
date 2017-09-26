@@ -259,5 +259,6 @@ By calling the "force_buffer_read" method we are instructing the instrument to r
 # API 
 
 |__Function__|__args__                     |__return values__|
+|------------|-----------------------------|-----------------|
 |setup       | station: qcodes.Station     | None            |
 |            | namespace: pysweep.NameSpace|                 |
