@@ -160,7 +160,7 @@ my_measurement = Measurement(
 )
 ```
 
-Where we define "gate_values" as 
+If the second argument of the sweep object is not an iterable or a list, it is assumed that it is a callable with arguments "station", "namespace". In the above example we could define "gate_values" as follows.  
 
 ```python
 def gate_values(station, namespace):
@@ -180,8 +180,10 @@ def calculate_next(station):
  station.source_drain(sd_current + di)
  dv = station.gate() - gate_voltage
  
- return 0.01 / (dv / di)   # The higher dV/dI, the closer we want to sample. 
+ return 0.01 / (0.1 + abs(dv / di))   # We want the sampling rate to be higher for higher dV/dI. 
 ```
+
+It is possible that two sweep object which are chained together with SweepProduct or SweepZip can communicate with each other via the namespace. Consider the scenario that we have two nested loops which 
 
 ## Measurement functions
 
