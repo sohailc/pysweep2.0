@@ -272,5 +272,5 @@ By calling the "force_buffer_read" method we are instructing the instrument to r
 
 |__Function__|__args__                     |__return values__                                                  |
 |------------|-----------------------------|-------------------------------------------------------------------|
-|measurement | station: qcodes.Station     | dictionary                                                        |
-|            | namespace: pysweep.NameSpace| containing the measurement names (key) and measured values (value)|
+|measurement | station: qcodes.Station     | dictionary, containing the measurement names (key) and measured        
+|            | namespace: pysweep.NameSpace| values (value) |
