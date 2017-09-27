@@ -235,7 +235,7 @@ We see that we can define multiple measurement functions. The measurement class 
 
 Let's consider a scenario where the sweep object is sending triggers to a measurement instrument and at each trigger this instrument stores the measured value in an internal buffer. For certain type of measurements this can dramatically increase the measurement speed (as is the case with for example the SR830 lockin amplifier). We read out the buffer when either the buffer is full or when the measurement is done. How do we program this will pysweep? 
 
-The measurement function will be called at each iteration of the sweep object but unless the instrument buffer is full or we are at the end of a sweep we cannot return any measurement value. When we do read the buffer al the previously unread values will be returned at once. To accomodate this, the measurement functions will for instance return at each iteration
+The measurement function will be called at each iteration of the sweep object but unless the instrument buffer is full or we are at the end of a sweep we cannot return any measurement value. When we do read the buffer al the previously unread values will be returned at once. To accomodate this, the measurement functions will for example return at each iteration
 
 ```python
 {
@@ -269,11 +269,39 @@ my_measurement = Measurement(
  cleanup_function, 
  SweepObject(powersource.channel[0], np.linspace(0, 1, 100))\
   .at_each(send_trigger)\
-  .at_end(instrument.force_buffer_read), 
- [instrument.read_buffer]
+  .at_end(force_buffer_read), 
+ [measurement]
 )
+
+def send_trigger(station, namespace):
+    station.instrument.trigger()
+    namespace.count_triggers += 1
+
+def force_buffer_read(station, namespace):
+    namespace.force_buffer_read = True
+
+def measurement(station, namespace):
+    if not namespace.force_buffer_read and namespace.count_triggers < station.instrument.buffer_size:
+        id = "delayed_{}".format(str(uuid.uuid1()))
+        namespace.ids.append(id)
+        
+        return {
+            "gate_voltage" {
+                "unit": "v"
+                "value": id
+            }
+        }
+    else:
+        data = station.instrument.read_buffer()
+        d = {
+            "gate_voltage": {
+                "unit": "v", 
+                "value": {k: v for k, v in zip(namespace.ids, data)}
+            }
+        }
+        namespace.ids = []
+        namespace.count_triggers = 0
 ```
-By calling the "force_buffer_read" method we are instructing the instrument to read the buffer even if it is not full. 
 
 ### Measurements without sweeping parameters
 
