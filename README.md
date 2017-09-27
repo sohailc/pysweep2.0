@@ -164,10 +164,10 @@ Consider for example a situation where a measurement function sweeps a gate volt
 
 ```python
 my_measurement = Measurement(
- setup_function, 
- cleanup_function, 
- SweepObject(station.gate, gate_values), 
- [measure_source_drain]
+    setup_function, 
+    cleanup_function, 
+    SweepObject(station.gate, gate_values), 
+    [measure_source_drain]
 )
 ```
 
@@ -175,23 +175,23 @@ If the second argument of the sweep object is not an iterable or a list, it is a
 
 ```python
 def gate_values(station, namespace):
- start_value = 0.2  #[V]
- end_value = 0.8 #[V]
- current_value = start_value
- while current_value < end_value:
-  yield current_value
-  current_value += calculate_next(station)  # Use the station to calculate an updated value for the gate
+    start_value = 0.2  #[V]
+    end_value = 0.8 #[V]
+    current_value = start_value
+    while current_value < end_value:
+        yield current_value
+        current_value += calculate_next(station)  # Use the station to calculate an updated value for the gate
   
 def calculate_next(station):
- sd_current = station.source_drain()
- gate_voltage = station.gate()
+    sd_current = station.source_drain()
+    gate_voltage = station.gate()
  
- # Measure dV/dI
- di = 0.1
- station.source_drain(sd_current + di)
- dv = station.gate() - gate_voltage
+    # Measure dV/dI
+    di = 0.1
+    station.source_drain(sd_current + di)
+    dv = station.gate() - gate_voltage
  
- return 0.01 / (0.1 + abs(dv / di))   # We want the sampling rate to be higher for higher dV/dI. 
+    return 0.01 / (0.1 + abs(dv / di))   # We want the sampling rate to be higher for higher dV/dI. 
 ```
 
 It is possible that two sweep object which are chained together with SweepProduct or SweepZip can communicate with each other via the namespace. 
