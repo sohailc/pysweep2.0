@@ -131,6 +131,8 @@ For this reason, a SweepObject implementation or subclass always needs to implem
 ```python
 def __next__(self):
     value = next(iterable)
+    qcodes_parameter.set(value)
+    
     label = qcodes_parameter.label
     unit = qcodes_parameter.unit
     return {
