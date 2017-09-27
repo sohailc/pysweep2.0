@@ -146,7 +146,7 @@ for v in values:
 ```
 Before_index and after_index work as follows: 
 ```python
-sweep_object(parameter, values).after_index(2, action)
+sweep_object(parameter, values).after_index(index, action)
 ```
 is approximately the same as 
 ```python
@@ -156,7 +156,7 @@ for count, v in enumerate(values):
         action()
 ```
 
-In principle we can use negative indices as well and these will work the same negative indices in lists and arrays. However, this only works of the "values" parameter has a defined length. Negative indices will raise a ValueError in the case that "values" does not have a "\_\_len\_\_" attribute, as is the case for generators. 
+In principle we can use negative indices as well and these will work the same as negative indices in lists and arrays. For example, after_index(-1, action) will perform an action after setting the last value. However, this only works of the "values" parameter has a defined length. Negative indices will raise a ValueError in the case that "values" does not have a "\_\_len\_\_" attribute, as is the case for generators. 
 
 ### More complex sweeping operation with e.g. with adaptive stepping
 
