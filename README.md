@@ -120,14 +120,27 @@ my_measurement = Measurement(
 
 ### A SweepObject instance is iterable
 
-The measurement function, under the hood, will perform the action: 
+The Measurement class, under the hood, will perform the action: 
 
 ```python
-for iteration in sweep_object: 
+for iteration in SweepObject(qcodes_parameter, iterable): 
     dataset.add(iteration)
     ... # code to perform measurements
 ```
-At each iteration the sweep_object will return a dictionary, e.g.: 
+For this reason, a SweepObject implementation or subclass always needs to implement the methods "\_\_next\_\_" and "\_\_iter\_\_". In the above example, The "\_\_next\_\_" of the sweep object is approximately defined as follows: 
+```python
+def __next__(self):
+    value = next(iterable)
+    label = qcodes_parameter.label
+    unit = qcodes_parameter.unit
+    return {
+        label: {
+            "unit": unit, 
+            "value": value
+        }
+    }
+```
+At each iteration the SweepObject will return a dictionary, e.g.: 
 
 ```python
 iteration = {
@@ -137,8 +150,6 @@ iteration = {
     }
 }
 ```
-
-For this reason, a SweepObject implementation or subclass always needs to implement the methods "\_\_next\_\_" and "\_\_iter\_\_", the former of which returns the above mentioned dictionary.  
 
 ### Performing actions before, during and after the sweep
 
