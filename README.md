@@ -1,6 +1,6 @@
 # PySweep 2.0 interface and design decisions
 ## Introduction
-PySweep is a framework intended to be used on top of qcodes [QCoDeS](https://github.com/QCoDeS/Qcodes) in order to define measurements flexibly. At the most general level, a measurement has dependent and independant variables with "setup" and "clean up" methods. For different values of the independant variables, the dependant variables will be measured. In our framework we will decouple the sweeping of the independant variables, from the measurement of the dependant variables. At the most general level, a measurement in our framework looks as follows: 
+PySweep is a framework intended to be used on top of qcodes [QCoDeS](https://github.com/QCoDeS/Qcodes) in order to define measurements flexibly. At the most general level, a measurement has dependent and independent variables with "setup" and "clean up" methods. For different values of the independent variables, the dependant variables will be measured. In our framework we will decouple the sweeping of the independent variables, from the measurement of the dependant variables. At the most general level, a measurement in our framework looks as follows: 
 
 ```python
 from pysweep import Measurement, SpyViewExporter
@@ -266,7 +266,7 @@ The pysweep module shall have the following class and function definitions:
     * Description: Responsible for measurements 
 
 * SweepObject: class
-    * Description: Responsible for setting the independant variables in a measurement
+    * Description: Responsible for setting the independent variables in a measurement
     
 * BasePysweepExporter: class
     * Description: The base class of a exporter which writes an internal measurement dictionary to a file
@@ -291,7 +291,7 @@ The pysweep module shall have the following class and function definitions:
 
 Signature: 
 ```
-Measurement(setup, cleanup, sweep_object=None, [measurement1, measurement2, ...])
+Measurement(setup, cleanup, sweep_object=None, measurements=[measurement1, measurement2, ...])
 ```
 
 ### Constructor arguments
@@ -310,7 +310,7 @@ Measurement(setup, cleanup, sweep_object=None, [measurement1, measurement2, ...]
     * returns: None
 
 * sweep_object: pysweep.SweepObject, optional
-    * Description: This object is responsible for setting the independant variables during a measurement. If no parameters are swept during a measurement (e.g. all sweeping is done by hardware), this parameter can be None. For a complete description, see the API of this class described elsewhere in this document. 
+    * Description: This object is responsible for setting the independent variables during a measurement. If no parameters are swept during a measurement (e.g. all sweeping is done by hardware), this parameter can be None. For a complete description, see the API of this class described elsewhere in this document. 
 
 * measurement_list: list, callable
     * Description: A list of callables 
@@ -349,7 +349,8 @@ SweepObject(qcodes_parameter, sweepvalues)
 
 ### Methods
 * \_\_next\_\_
-    * Description: A sweep object is an iterable, which means we can loop over a sweep object. Everytime \_\_next\_\_ is called, the sweep object shall return a dictionary in which the keys represent the independant parameter names and the values the new values of these parameters. Even though the constructor of the SweepObject class accepts one parameter sweep objects can be chained, which gives us a new sweep object which can set multiple parameters
+    * Description: A sweep object is an iterable, which means we can loop over a sweep object. 
+    * Returns: Dict, Everytime \_\_next\_\_ is called, the sweep object shall return a dictionary in which the keys represent the independent parameter names and the values the new values of these parameters. 
 
 * at_start
     * Description: Give a function to be executed at the start of a sweep
