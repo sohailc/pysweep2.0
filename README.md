@@ -126,7 +126,7 @@ To solve this we implement "before_each", "after_each", "before_index", "after_i
 
 For example:
 ```python
-sweep_object(parameter, values).before_each(action)
+SweepObject(parameter, values).before_each(action)
 ```
 is approximately the same as 
 ```python
@@ -136,7 +136,7 @@ for v in values:
 ```
 While 
 ```python
-sweep_object(parameter, values).after_each(action)
+SweepObject(parameter, values).after_each(action)
 ```
 is approximately the same as 
 ```python
@@ -146,7 +146,7 @@ for v in values:
 ```
 Before_index and after_index work as follows: 
 ```python
-sweep_object(parameter, values).after_index(index, action)
+SweepObject(parameter, values).after_index(index, action)
 ```
 is approximately the same as 
 ```python
