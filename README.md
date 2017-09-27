@@ -141,14 +141,23 @@ def __next__(self):
     }
 ```
 At each iteration the SweepObject will return a dictionary, e.g.: 
-
 ```python
-iteration = {
-    "gate_voltage": {
-        "unit": "V"
-        "value": 2.3
-    }
-}
+iteration = {"gate_voltage": {"unit": "V", "value": 2.3}}
+```
+This dictionary is then added to the dataset by the Measurement class. 
+
+As discussed in the previous section, the product of two SweepObjects is itself a SweepObject. We will look at a simple scenario to understand what the iterations of this combined sweep object produces: 
+```python
+>>> so1 = SweepObject(gate1, [0, 1])
+>>> so2 = SweepObject(gate2, [3, 6])
+
+>>> for iteration in pysweep.sweep_product(so1, so2):
+>>>     print("iteration = ", iteration)
+
+iteration = {"gate1": {"unit": "V", "value": 0}, "gate2": {"unit": "V", "value": 3}}
+iteration = {"gate1": {"unit": "V", "value": 1}, "gate2": {"unit": "V", "value": 3}}
+iteration = {"gate1": {"unit": "V", "value": 0}, "gate2": {"unit": "V", "value": 6}}
+iteration = {"gate1": {"unit": "V", "value": 1}, "gate2": {"unit": "V", "value": 6}}
 ```
 
 ### Performing actions before, during and after the sweep
