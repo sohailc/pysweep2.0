@@ -120,17 +120,43 @@ my_measurement = Measurement(
 
 ### Performing actions before, during and after the sweep
 
-It can be necessary to perform certain actions before, during or after a sweep. For instance, at each iteration in the sweep we might want to send a hardware trigger. Note that it is not always possible to solve this in the measurement functions. We might for instance send a hardware trigger in the measurement function, but suppose we want to perform some action at the start or end of a sweep; there is no way for a measurement function to know if we are starting or ending a sweep. 
+It can be necessary to perform certain actions before, during or after a sweep. For instance, at each iteration in the sweep we might want to send a hardware trigger. Note that it is not always possible to solve this in the measurement functions. Consider for example the scenario where we want to perform some action at the start or end of a sweep; there is no way for a measurement function to know if we are starting or ending a sweep. 
 
-To solve this problem we will implement "at_start", "at_end" and "at_each" methods on the sweep object. For instance, consider the following code: 
+To solve this we implement "before_each", "after_each", "before_index", "after_index" methods. 
 
+For example:
 ```python
-sweep_product = SweepProduct([
- SweepObject(qcodes_parameter1, iterable1).at_each(trigger_function),
- SweepObject(qcodes_parameter2, iterable2)
-])
+sweep_object(parameter, values).before_each(action)
 ```
-These functions return a SweepObject so that we can do "SweepObject().at_each().at_end()". It is required that functions in "at_each", "at_end" and "as_start" accept two input arguments: station (of type qcodes.Station) and namespace (of type pysweep.NameSpace).
+is approximately the same as 
+```python
+for v in values:
+    action()
+    parameter.set(v)
+```
+While 
+```python
+sweep_object(parameter, values).after_each(action)
+```
+is approximately the same as 
+```python
+for v in values:
+    parameter.set(v)
+    action()
+```
+Before_index and after_index work as follows: 
+```python
+sweep_object(parameter, values).after_index(2, action)
+```
+is approximately the same as 
+```python
+for count, v in enumerate(values):
+    parameter.set(v)
+    if count == index:
+        action()
+```
+
+In principle we can use negative indices as well and these will work the same negative indices in lists and arrays. However, this only works of the "values" parameter has a defined length. Negative indices will raise a ValueError in the case that "values" does not have a "\_\_len\_\_" attribute, as is the case for generators. 
 
 ### More complex sweeping operation with e.g. with adaptive stepping
 
