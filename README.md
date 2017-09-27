@@ -9,10 +9,10 @@ Measurement.default_station = station
 Measurement.default_exporter = SpyViewExporter
 
 my_measurement = Measurement(
- [setup_function1, setup_function2, ...], 
- [cleanup_function1, cleanup_function2, ...], 
- [measurement_function1, measurement_function2, ...],
- [sweep_object1, sweep_object2, ...], 
+    [setup_function1, setup_function2, ...], 
+    [cleanup_function1, cleanup_function2, ...], 
+    [measurement_function1, measurement_function2, ...],
+    [sweep_object1, sweep_object2, ...], 
 )
 
 my_measurement.run(name="some_descriptive_name", description="some succinct description")
@@ -156,7 +156,7 @@ for count, v in enumerate(values):
         action()
 ```
 
-In principle we can use negative indices as well and these will work the same as negative indices in lists and arrays. For example, after_index(-1, action) will perform an action after setting the last value. However, this only works of the "values" parameter has a defined length. Negative indices will raise a ValueError in the case that "values" does not have a "\_\_len\_\_" attribute, as is the case for generators. 
+In principle we can use negative indices as well and these will work the same as negative indices in lists and arrays. For example, after_index(-1, action) will perform an action after setting the last value. However, this only works if the "values" parameter has a defined length. Negative indices will raise a ValueError in the case that "values" does not have a "\_\_len\_\_" attribute, as is the case for generators. 
 
 ### More complex sweeping operation with e.g. with adaptive stepping
 
