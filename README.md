@@ -9,10 +9,10 @@ Measurement.default_station = station
 Measurement.default_exporter = SpyViewExporter
 
 my_measurement = Measurement(
- setup_function, 
- cleanup_function, 
- sweep_object, 
- [measurement_function1, measurement_function2, ...]
+ [setup_function1, setup_function2, ...], 
+ [cleanup_function1, cleanup_function2, ...], 
+ [measurement_function1, measurement_function2, ...],
+ [sweep_object1, sweep_object2, ...], 
 )
 
 my_measurement.run(name="some_descriptive_name", description="some succinct description")
@@ -28,9 +28,11 @@ The measurement class has default class attributes which can be set before start
 
 ## Measurement setup and cleanup 
 
-The setup brings the hardware in a state making it ready to perform a measurement. This could for example be instructing a lock-in amplifier to respond to triggers when these are send or putting an oscilloscope in the correct measurement ranges. A cleanup ensure that the instruments are left in well-defined settings after the measurement has concluded. 
+A setup function brings the hardware in a state making it ready to perform a measurement. This could for example be instructing a lock-in amplifier to respond to triggers when these are send or putting an oscilloscope in the correct measurement ranges. A cleanup ensure that the instruments are left in well-defined settings after the measurement has concluded. 
 
-These functions accept a two parameter as input, the first of type QCoDeS Station and the second shall be an instance of pysweep.NameSpace. The setup and cleanup functions do not return anything. 
+The measurement class accepts a list of setup and clean up function. This enhances modularity as not all measurements will have the same hardware; If a measurement does not have an oscilloscope, there is no need to include a "setup_scope" function. 
+
+These functions accept a two parameter as input, the first of type QCoDeS Station and the second shall be an instance of pysweep.NameSpace. The setup and cleanup functions return a dictionary with arbitary contents. We can for example log the start and end times of the measurement.  
 
 ## pysweep.NameSpace
 
@@ -38,7 +40,7 @@ The pysweep namespace object is simply defined as
 
 ```python
 class NameSpace:
- pass
+    pass
 ```
 and at first glance seems rather useless. What we can do with the namespace is for example the following: 
 
@@ -56,7 +58,7 @@ All setup, cleanup and measurement functions shall accept a namespace as second 
 
 ### The motivation for using namespaces
 
-One might wonder why we are using namespaces for communication between functions. Why not make these function class methods, as the pythonic namespace available will be "self"? However, if the setup, cleanup and measurement functions would be class methods of a single instance then these methods will be coupled to each other. Let us suppose that we have two measurements, each with its own setup, measure and cleanup function: 
+One might wonder why these function class methods, as then the pythonic namespace "self" will be available. However, if the setup, cleanup and measurement functions would be class methods of a single instance then these methods will be coupled to each other. Let us suppose that we have two measurements, each with its own setup, measure and cleanup function: 
 
 ```
 Measurement 1 = setup1, measure1, cleanup1 
@@ -66,72 +68,55 @@ Now lets suppose that we want to define a third measurement which combines the t
 ```
 Measurement 3 = setup1, measure2, cleanup3 
 ```
-There is no way to reuse code for the third measurement if the functions involved are class methods. Our design with namespaces allows us to mix and match setup, measure and cleanup functions to our hearts content :-)
+There is no way to reuse code for the third measurement if the functions involved are class methods. Our design with namespaces allows us to mix and match setup, measure and cleanup functions to our hearts content.
 
 ## SweepObject
 
-The measurement class accepts a single "sweep object" as the thrid parameter, which shall be an instance of a SweepObject class. The basic signature of the SweepObject class is as follows: 
+The measurement class accepts a list of sweep_object's as the thrid parameter, which shall be an instances of a SweepObject class. The basic signature of the SweepObject class is as follows: 
 
 ```python
 from pysweep import SweepObject
 
 SweepObject(qcodes_parameter, iterable)
 ```
-The second argument of SweepObject may also be a generator (or any class which implements "__next__"). 
+The second argument of SweepObject may also be a list or generator (or any class which implements "\_\_next\_\_"). 
 
-At first glance this design seems limited in the following senses: 
-1) What if we want to sweep multiple parameters? 
-2) What if we want to perform more actions at each sweep iteration then simply setting a parameter (e.g. sending a trigger)? 
-3) How do we establish feedback between a measurement and the sweep object? 
-
-We will address these concerns below
-
-### Multiple sweeping parameters
-
-We shall apply a chaining construct to implement sweeping multiple parameters. For instance, the following code shall sweep two parameters in a nested loop: 
+A list of multiple sweep objects will be interpreted as a nested sweep. In other words, 
 
 ```python
-from pysweep import SweepObject, SweepProduct
-
-sweep_product = SweepProduct([
- SweepObject(qcodes_parameter1, iterable1),
- SweepObject(qcodes_parameter2, iterable2)
-])
+my_measurement = Measurement(
+    [setup_function], 
+    [cleanup_function], 
+    [measurement_function],
+    [sweep_object1, sweep_object2], 
+)
 ```
-
-In pseudo-code, this does approximately: 
-
+is approximately the same as 
 ```python
-for value2 in iterable2: 
- qcodes_parameter2.set(value2)
- for value1 in iterable1: 
-  qcodes_parameter1.set(value1)
-  ...  # some measuement
+setup_function()
+for i in sweep_object1:
+    for j in sweep_object2:
+        measurement_function()
+cleanup_function()
 ```
-
-Note that the first argument of sweep product represents the inner most loop. The returning sweep_product is another instance of SweepObject which can be inserted into the Measurement class. 
-
-Another way to chain is to "co-sweep" two parameters: 
-
+An equivalent way of writing this is 
 ```python
-from pysweep import SweepObject, SweepZip
-
-sweep_zip = SweepZip([
- SweepObject(qcodes_parameter1, iterable1),
- SweepObject(qcodes_parameter2, iterable2)
-])
+my_measurement = Measurement(
+    [setup_function], 
+    [cleanup_function], 
+    pysweep.sweep_product(sweep_object1, sweep_object2),
+    [sweep_object1, sweep_object2], 
+)
 ```
-
-In pseudo-code, this does approximately: 
-
+A way to perform a co-sweep (where two parameters are being swept at the same time) is as follows: 
 ```python
-for value1, value2 in zip(iterable1, iterable2): 
- qcodes_parameter1.set(value1)
- qcodes_parameter2.set(value2)
- ...  # some measuement
+my_measurement = Measurement(
+    [setup_function], 
+    [cleanup_function], 
+    pysweep.sweep_zip(sweep_object1, sweep_object2),
+    [sweep_object1, sweep_object2], 
+)
 ```
-
-Needless to say, we can arbitrarily combine SweepProduct and SweepZip to create complex sweeping schemes. 
 
 ### Performing actions before, during and after the sweep
 
