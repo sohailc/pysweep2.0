@@ -118,6 +118,28 @@ my_measurement = Measurement(
 )
 ```
 
+### A SweepObject instance is iterable
+
+The measurement function, under the hood, will perform the action: 
+
+```python
+for iteraton in sweep_object: 
+    dataset.add(iteration)
+    ... # code to perform measurements
+```
+At each iteration the sweep_object will return a dictionary, e.g.: 
+
+```python
+iteraton = {
+    "gate_voltage": {
+        "unit": "V"
+        "value": 2.3
+    }
+}
+```
+
+For this reason, a SweepObject implementation or subclass always needs to implement the methods "\_\_next\_\_" and "\_\_iter\_\_", the former of which returns the above mentioned dictionary.  
+
 ### Performing actions before, during and after the sweep
 
 It can be necessary to perform certain actions before, during or after a sweep. For instance, at each iteration in the sweep we might want to send a hardware trigger. Note that it is not always possible to solve this in the measurement functions. Consider for example the scenario where we want to perform some action at the start or end of a sweep; there is no way for a measurement function to know if we are starting or ending a sweep. 
