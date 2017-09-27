@@ -102,9 +102,9 @@ sweep_product = SweepProduct([
 In pseudo-code, this does approximately: 
 
 ```python
-for value1 in iterable1: 
+for value2 in iterable2: 
  qcodes_parameter2.set(value2)
- for value2 in iterable2: 
+ for value1 in iterable1: 
   qcodes_parameter1.set(value1)
   ...  # some measuement
 ```
@@ -116,7 +116,7 @@ Another way to chain is to "co-sweep" two parameters:
 ```python
 from pysweep import SweepObject, SweepZip
 
-sweep_product = SweepZip([
+sweep_zip = SweepZip([
  SweepObject(qcodes_parameter1, iterable1),
  SweepObject(qcodes_parameter2, iterable2)
 ])
@@ -137,7 +137,7 @@ Needless to say, we can arbitrarily combine SweepProduct and SweepZip to create 
 
 It can be necessary to perform certain actions before, during or after a sweep. For instance, at each iteration in the sweep we might want to send a hardware trigger. Note that it is not always possible to solve this in the measurement functions. We might for instance send a hardware trigger in the measurement function, but suppose we want to perform some action at the start or end of a sweep; there is no way for a measurement function to know if we are starting or ending a sweep. 
 
-Another solution we could propose to put some intelligence in the iterator (e.g. using a class instance which implements __next__) and while for complex cases this can indeed me necessary, for simple cases we will implement "at_start", "at_end" and "at_each" methods on the sweep object. For instance, consider the following code: 
+To solve this problem we will implement "at_start", "at_end" and "at_each" methods on the sweep object. For instance, consider the following code: 
 
 ```python
 sweep_product = SweepProduct([
@@ -145,7 +145,7 @@ sweep_product = SweepProduct([
  SweepObject(qcodes_parameter2, iterable2)
 ])
 ```
-The complete signature of the at_start, at_end and at_each: "at_each(callable, args)" where args is an optional tuple. These functions return a SweepObject so that we can do "SweepObject().at_each().at_end()". 
+These functions return a SweepObject so that we can do "SweepObject().at_each().at_end()". It is required that functions in "at_each", "at_end" and "as_start" accept two input arguments: station (of type qcodes.Station) and namespace (of type pysweep.NameSpace).
 
 ### More complex sweeping operation with e.g. with adaptive stepping
 
@@ -255,6 +255,22 @@ my_measurement = Measurement(
 )
 ```
 By calling the "force_buffer_read" method we are instructing the instrument to read the buffer even if it is not full. 
+
+### Measurements without sweeping parameters
+
+Sometimes we do not sweep parameters in software and instead leave all sweeping in hardware. For this reason, the sweep_object parameter in the measurement class is an optional parameter. However, the Measurement class still needs to know what the dependent and independent parameters are in this case. In this case the measurement function will need to return both in the following format: 
+
+```python
+{
+    "independent": {
+        "gate1": [1, 2, 3, 4, 5, 1, 2, 3, ...]
+        "gate2": [1, 1, 1, 1, 1, 2, 2, 2, ...]
+    }
+    "dependent": {
+        "source-drain": [0.11, 0.10, 0.09, ...]
+    }
+}
+```
 
 # API 
 
