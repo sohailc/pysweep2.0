@@ -123,14 +123,14 @@ my_measurement = Measurement(
 The measurement function, under the hood, will perform the action: 
 
 ```python
-for iteraton in sweep_object: 
+for iteration in sweep_object: 
     dataset.add(iteration)
     ... # code to perform measurements
 ```
 At each iteration the sweep_object will return a dictionary, e.g.: 
 
 ```python
-iteraton = {
+iteration = {
     "gate_voltage": {
         "unit": "V"
         "value": 2.3
@@ -179,6 +179,15 @@ for count, v in enumerate(values):
 ```
 
 In principle we can use negative indices as well and these will work the same as negative indices in lists and arrays. For example, after_index(-1, action) will perform an action after setting the last value. However, this only works if the "values" parameter has a defined length. Negative indices will raise a ValueError in the case that "values" does not have a "\_\_len\_\_" attribute, as is the case for generators. 
+
+The return value of the before_each, after_each, before_index and after_index functions are instances of SweepObject themselves. This allowes us to, for example, write
+
+```python
+SweepObject(parameter, values).before_each(action1).after_each(action2)
+```
+
+The "action" callable can return a dictionary which will be added to the dictionary returned when "\_\_next\_\_" is called on the sweep object. 
+
 
 ### More complex sweeping operation with e.g. with adaptive stepping
 
