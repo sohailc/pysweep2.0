@@ -16,7 +16,7 @@ def product_operator(point_functions):
 
 
 class BaseSweepObject:
-    def __init__(self, parameters, point_functions, chain_operator=None):
+    def __init__(self, parameters, point_functions, chain_operator):
         """
         Parameters
         ----------
@@ -28,19 +28,11 @@ class BaseSweepObject:
         chain_operator: callable
             Callable which accepts a list of generator functions as input and returns a single generator function. This
             function accepts two parameters: a QCoDeS Station and a pysweep Namespace
-            If n_parameters > 1, the operator argument is mandatory.
         """
 
         self._parameters = parameters
         self._point_functions = point_functions
-
-        if chain_operator is None:
-            if len(point_functions) == 1:
-                self._chain_operator = pass_operator
-            else:
-                raise ValueError("Do not know how to chain point functions, no operator given")
-        else:
-            self._chain_operator = chain_operator
+        self._chain_operator = chain_operator
 
         self._point_generator = None
         self._station = None
@@ -72,10 +64,6 @@ class SweepObject(BaseSweepObject):
         parameter: list, qcodes.StandardParameter
         point_function: iterable or a function returning an iterable
         """
-        def pf(station, namespace):
-            for value in point_function:
-                yield value
-
         if not isinstance(parameter, StandardParameter):
             raise ValueError("The Parameter should be of type QCoDeS StandardParameter")
 
@@ -85,7 +73,7 @@ class SweepObject(BaseSweepObject):
         else:
             self.point_function = point_function
 
-        super().__init__([self.parameter], [self.point_function])
+        super().__init__([self.parameter], [self.point_function], chain_operator=pass_operator)
 
 
 def sweep_product(sweep_objects):

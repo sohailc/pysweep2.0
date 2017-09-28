@@ -31,3 +31,6 @@ class Measurement:
         self._setup(Measurement.station, self._namespace)
         for iteration in self._sweep_object:
             pass   # TODO: Left off here
+
+        self._cleanup(Measurement.station, self._namespace)
+        self._namespace = None
