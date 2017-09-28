@@ -11,8 +11,31 @@ def pass_operator(point_functions):
     return inner
 
 
+def _product_two_operator(pf1, pf2):
+
+    def tpl(value):
+        if not isinstance(value, tuple):
+            return value,
+        return value
+
+    def inner(station, namespace):
+        for v1 in pf1(station, namespace):
+            for v2 in pf2(station, namespace):
+                yield tpl(v2) + tpl(v1)  # This is not a bug, the addition here is in the right order
+
+    return inner
+
+
 def product_operator(point_functions):
-    pass  # TODO: Left of here... finish tonight/tomorrow
+
+    def inner(station, namespace):
+        rval = point_functions[0]
+        for pf in point_functions[1:]:
+            rval = _product_two_operator(pf, rval)
+
+        return rval(station, namespace)
+
+    return inner
 
 
 class BaseSweepObject:
@@ -86,6 +109,6 @@ def sweep_product(sweep_objects):
     params = [so.parameter for so in sweep_objects]
     point_functions = [so.point_function for so in sweep_objects]
 
-    return BaseSweepObject(params, point_functions, product_operator)
+    return BaseSweepObject(params, point_functions, chain_operator=product_operator)
 
 
