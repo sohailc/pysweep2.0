@@ -1,25 +1,33 @@
 from pysweep import Namespace
-from pysweep.sweep_object import SweepObject
+from pysweep.sweep_object import SweepObject, sweep_product
 
 
 class Measurement:
     station = None
-    namespace = None
 
     @classmethod
     def attach_station(cls, station):
         cls.station = station
 
-    @classmethod
-    def sweep_object(cls, parameter, point_function):
+    def __init__(self, setup, cleanup, measures, sweep_objects):
 
-        if cls.namespace is None:
-            cls.namespace = Namespace()
+        self._setup = setup
+        self._cleanup = cleanup
+        self._measures = measures
 
-        return SweepObject(parameter, point_function, cls.station, cls.namespace)
+        if hasattr(sweep_objects, "__len__"):
+            self._sweep_object = sweep_product(sweep_objects)
+        else:
+            self._sweep_object = sweep_objects
 
-    def __init__(self, swo):
-        self._sweep_object = swo
+        self.name = None
+        self._namespace = None
 
+    def run(self, name, description=None):
 
-sweep_object = Measurement.sweep_object
+        self.name = name
+        self._namespace = Namespace()
+
+        self._setup(Measurement.station, self._namespace)
+        for iteration in self._sweep_object:
+            pass   # TODO: Left off here
