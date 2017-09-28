@@ -1,4 +1,4 @@
-name: qcodes
+name: pysweep
 channels: 
  - defaults
  - conda-forge
