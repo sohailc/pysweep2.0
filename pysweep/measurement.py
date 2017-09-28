@@ -21,16 +21,17 @@ class Measurement:
             self._sweep_object = sweep_objects
 
         self.name = None
-        self._namespace = None
 
     def run(self, name, description=None):
 
         self.name = name
-        self._namespace = Namespace()
+        namespace = Namespace()
+        self._sweep_object.set_station(Measurement.station)
+        self._sweep_object.set_namespace(namespace)
 
-        self._setup(Measurement.station, self._namespace)
+        self._setup(Measurement.station, namespace)
         for iteration in self._sweep_object:
             pass   # TODO: Left off here
 
-        self._cleanup(Measurement.station, self._namespace)
-        self._namespace = None
+        self._cleanup(Measurement.station, namespace)
+        self._sweep_object.unset_namespace()
