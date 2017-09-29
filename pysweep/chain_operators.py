@@ -46,8 +46,9 @@ def product_operator(point_functions):
 
     Return
     ------
-    callable: (station, namespace)
-         a generator creating callable. Unrolling this generator will yield a tuple of length two
+    callable:
+         a generator creating callable of two arguments; station and namespace. Unrolling this generator will yield a
+         tuple of length two
 
     Example
     -------

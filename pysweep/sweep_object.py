@@ -25,13 +25,18 @@ class BaseSweepObject:
         self._point_generator = None
         self._station = None
         self._namespace = None
+        self._after_each = None
+        self._before_each = None
 
     def __next__(self):
         values, modify = next(self._point_generator)
+        self._before_each(self._station, self._namespace)
 
         for parameter, value, mdy in zip(self._parameters, values, modify):
             if mdy:
                 parameter.set(value)
+
+        self._after_each(self._station, self._namespace)
 
         return {p.label: {"unit": p.units, "value": v} for p, v in zip(self._parameters, values)}
 
@@ -47,6 +52,12 @@ class BaseSweepObject:
 
     def unset_namespace(self):
         self._namespace = None
+
+    def after_each(self, after_each_function):
+        self._after_each = after_each_function
+
+    def before_each(self, before_each_function):
+        self._before_each = before_each_function
 
 
 class SweepObject(BaseSweepObject):
