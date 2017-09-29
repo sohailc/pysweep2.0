@@ -1,52 +1,6 @@
 from qcodes import StandardParameter
 
-
-def tpl(value):
-    if not isinstance(value, tuple):
-        return value,
-    return value
-
-
-def pass_operator(point_functions):
-    def inner(station, namespace):
-        for value in point_functions[0](station, namespace):
-            yield tpl(value), (True,)
-
-    return inner
-
-
-def _product_two_operator(outer_pf, inner_pf):
-    def mov(atuple):
-        yield atuple
-        while True:
-            yield (False,) * len(atuple)
-
-    def inner(station, namespace):
-        for v1, j in outer_pf(station, namespace):
-            m = mov(j)
-            for v2 in inner_pf(station, namespace):
-                yield tpl(v2) + tpl(v1), (True,) + next(m)
-
-    return inner
-
-
-def product_operator(point_functions):
-    def add_trues(point_function):
-        def inner(station, namespace):
-            for v in point_function(station, namespace):
-                yield v, (True,)
-
-        return inner
-
-    def inner(station, namespace):
-        rval = add_trues(point_functions[-1])
-
-        for pf in point_functions[-2::-1]:
-            rval = _product_two_operator(rval, pf)
-
-        return rval(station, namespace)
-
-    return inner
+from .chain_operators import pass_operator, product_operator
 
 
 class BaseSweepObject:
