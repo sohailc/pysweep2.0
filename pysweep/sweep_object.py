@@ -1,37 +1,48 @@
-from inspect import signature, isgeneratorfunction
-
 from qcodes import StandardParameter
+
+
+def tpl(value):
+    if not isinstance(value, tuple):
+        return value,
+    return value
 
 
 def pass_operator(point_functions):
     def inner(station, namespace):
         for value in point_functions[0](station, namespace):
-            yield (value, )
+            yield tpl(value), (True,)
 
     return inner
 
 
-def _product_two_operator(pf1, pf2):
-
-    def tpl(value):
-        if not isinstance(value, tuple):
-            return value,
-        return value
+def _product_two_operator(outer_pf, inner_pf):
+    def mov(atuple):
+        yield atuple
+        while True:
+            yield (False,) * len(atuple)
 
     def inner(station, namespace):
-        for v1 in pf1(station, namespace):
-            for v2 in pf2(station, namespace):
-                yield tpl(v2) + tpl(v1)  # This is not a bug, the addition here is in the right order
+        for v1, j in outer_pf(station, namespace):
+            m = mov(j)
+            for v2 in inner_pf(station, namespace):
+                yield tpl(v2) + tpl(v1), (True,) + next(m)
 
     return inner
 
 
 def product_operator(point_functions):
+    def add_trues(point_function):
+        def inner(station, namespace):
+            for v in point_function(station, namespace):
+                yield v, (True,)
+
+        return inner
 
     def inner(station, namespace):
-        rval = point_functions[0]
-        for pf in point_functions[1:]:
-            rval = _product_two_operator(pf, rval)
+        rval = add_trues(point_functions[-1])
+
+        for pf in point_functions[-2::-1]:
+            rval = _product_two_operator(rval, pf)
 
         return rval(station, namespace)
 
@@ -62,7 +73,12 @@ class BaseSweepObject:
         self._namespace = None
 
     def __next__(self):
-        values = next(self._point_generator)
+        values, modify = next(self._point_generator)
+
+        for parameter, value, mdy in zip(self._parameters, values, modify):
+            if mdy:
+                parameter.set(value)
+
         return {p.label: {"unit": p.units, "value": v} for p, v in zip(self._parameters, values)}
 
     def __iter__(self):
