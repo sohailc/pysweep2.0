@@ -3,8 +3,46 @@ from qcodes import StandardParameter
 from .chain_operators import pass_operator, product_operator
 
 
+class ParameterWrapper:
+
+    @staticmethod
+    def dummy_each(station, namespace):
+        pass
+
+    def __init__(self, param, before_each=None, after_each=None):
+        self._param = param
+        if before_each is None:
+            self._before_each = ParameterWrapper.dummy_each
+        else:
+            self._before_each = before_each
+
+        if after_each is None:
+            self._after_each = ParameterWrapper.dummy_each
+        else:
+            self._after_each = after_each
+
+    def add_before_each(self, before_each):
+        self._before_each = before_each
+
+    def add_after_each(self, after_each):
+        self._after_each = after_each
+
+    def set(self, value, station, namespace):
+        self._before_each(station, namespace)
+        self._param.set(value)
+        self._after_each(station, namespace)
+
+    @property
+    def label(self):
+        return self._param.label
+
+    @property
+    def units(self):
+        return self._param.units
+
+
 class BaseSweepObject:
-    def __init__(self, parameters, point_functions, chain_operator):
+    def __init__(self, parameters, point_functions, chain_operator, before_each=None, after_each=None):
         """
         Parameters
         ----------
@@ -18,25 +56,25 @@ class BaseSweepObject:
             function accepts two parameters: a QCoDeS Station and a pysweep Namespace
         """
 
-        self._parameters = parameters
+        self._parameters = [{False: ParameterWrapper(p, before_each, after_each),
+                             True: p
+                             }[isinstance(p, ParameterWrapper)] for p in parameters]
+
         self._point_functions = point_functions
         self._chain_operator = chain_operator
 
         self._point_generator = None
         self._station = None
         self._namespace = None
-        self._after_each = None
-        self._before_each = None
+        self._after_each = after_each
+        self._before_each = before_each
 
     def __next__(self):
         values, modify = next(self._point_generator)
-        self._before_each(self._station, self._namespace)
 
         for parameter, value, mdy in zip(self._parameters, values, modify):
             if mdy:
-                parameter.set(value)
-
-        self._after_each(self._station, self._namespace)
+                parameter.set(value, self._station, self._namespace)
 
         return {p.label: {"unit": p.units, "value": v} for p, v in zip(self._parameters, values)}
 
@@ -54,10 +92,12 @@ class BaseSweepObject:
         self._namespace = None
 
     def after_each(self, after_each_function):
-        self._after_each = after_each_function
+        self._parameters[0].add_after_each(after_each_function)
+        return self
 
     def before_each(self, before_each_function):
-        self._before_each = before_each_function
+        self._parameters[-1].add_before_each(before_each_function)
+        return self
 
 
 class SweepObject(BaseSweepObject):
@@ -71,13 +111,12 @@ class SweepObject(BaseSweepObject):
         if not isinstance(parameter, StandardParameter):
             raise ValueError("The Parameter should be of type QCoDeS StandardParameter")
 
-        self.parameter = parameter
         if not callable(point_function):
-            self.point_function = lambda station, namespace: (i for i in point_function)
+            _point_function = lambda station, namespace: (i for i in point_function)
         else:
-            self.point_function = point_function
+            _point_function = point_function
 
-        super().__init__([self.parameter], [self.point_function], chain_operator=pass_operator)
+        super().__init__([parameter], [_point_function], chain_operator=pass_operator)
 
 
 def sweep_product(sweep_objects):
@@ -87,8 +126,11 @@ def sweep_product(sweep_objects):
     sweep_objects: list, SweepObject
     """
 
-    params = [so.parameter for so in sweep_objects]
-    point_functions = [so.point_function for so in sweep_objects]
+    params = []
+    point_functions = []
+    for p in sweep_objects:
+        params.extend(p._parameters)
+        point_functions.extend(p._point_functions)
 
     return BaseSweepObject(params, point_functions, chain_operator=product_operator)
 
