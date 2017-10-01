@@ -56,9 +56,8 @@ class BaseSweepObject:
             function accepts two parameters: a QCoDeS Station and a pysweep Namespace
         """
 
-        self._parameters = [{False: ParameterWrapper(p, before_each, after_each),
-                             True: p
-                             }[isinstance(p, ParameterWrapper)] for p in parameters]
+        self._parameters = [{False: ParameterWrapper(p, before_each, after_each), True: p}
+                            [isinstance(p, ParameterWrapper)] for p in parameters]
 
         self._point_functions = point_functions
         self._chain_operator = chain_operator
