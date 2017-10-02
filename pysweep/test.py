@@ -61,5 +61,13 @@ def test3():
     ]).after_end(after_end):
         print(i)
 
+def test4():
+    for i in SweepProduct([
+        SweepObject(param1, [1, 2]).after_end(after_end),
+        SweepObject(param2, [1, 2]),
+        SweepObject(param3, [1, 2])
+    ]):
+        print(i)
+
 if __name__ == "__main__":
-    test2()
+    test4()
