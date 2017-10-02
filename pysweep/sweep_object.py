@@ -1,6 +1,9 @@
-
-class BaseSetterObject:
+class BaseSweepObject:
     def __init__(self):
+
+        self._point_generator = None
+        self._station = None
+        self._namespace = None
 
         self._measure_functions = {
             "before_each": [],
@@ -11,37 +14,35 @@ class BaseSetterObject:
 
         for name in self._measure_functions.keys():
             setattr(self, name, self._add_measure_function(name))
-            setattr(self, "execute_{}".format(name), self._execute_measure_function(name))
 
     def _add_measure_function(self, name):
         def inner(func):
             self._measure_functions[name].append(func)
+            return self
+
         return inner
 
     def _execute_measure_function(self, name):
-        def inner(station, namespace):
-            msg_all = dict()
-            for func in self._measure_functions[name]:
-                msg = func(station, namespace)
-                msg_all.update(msg)
+        msg_all = dict()
+        for func in self._measure_functions[name]:
+            msg = func(self._station, self._namespace)
+            msg_all.update(msg)
 
-            return msg_all
-
-        return inner
+        return msg_all
 
     def _add_hooks(self, setter_function):
-        def hooked(station, namespace):
+        def hooked():
 
             start = True
             stop = False
-            setter_generator = setter_function(station, namespace)
+            setter_generator = setter_function()
 
             while not stop:
 
                 try:
-                    before_msg = self.execute_before_each(station, namespace)
+                    before_msg = self._execute_measure_function("before_each")
                     main_msg = next(setter_generator)
-                    after_msg = self.execute_after_each(station, namespace)
+                    after_msg = self._execute_measure_function("after_each")
 
                     main_msg.update(before_msg)
                     main_msg.update(after_msg)
@@ -49,97 +50,61 @@ class BaseSetterObject:
 
                 except StopIteration:
                     stop = True
-                    self.execute_after_end(station, namespace)
+                    self._execute_measure_function("after_end")
                     continue
 
                 if start:
-                    self.execute_after_start(station, namespace)
+                    self._execute_measure_function("after_start")
                     start = False
 
         return hooked
 
+    def _setter_function(self):
+        raise NotImplementedError("Please subclass BaseSweepObject")
 
-class SetterObject(BaseSetterObject):
+    def __iter__(self):
+        self._point_generator = self._add_hooks(self._setter_function)()
+        return self
 
+    def __next__(self):
+        return next(self._point_generator)
+
+
+class SweepObject(BaseSweepObject):
     def __init__(self, parameter, point_function):
         self._parameter = parameter
-        self._point_function = point_function
+
+        if not callable(point_function):
+            _point_function = lambda station, namespace: iter(point_function)
+        else:
+            _point_function = point_function
+
+        self._point_function = _point_function
         super().__init__()
 
-    def _unroll(self, station, namespace):
-        for value in self._point_function(station, namespace):
+    def _setter_function(self):
+        for value in self._point_function(self._station, self._namespace):
             self._parameter.set(value)
-            yield {self._parameter.name: {"units": self._parameter.units, "value": value}}
-
-    def __call__(self, station, namespace):
-        return self._add_hooks(self._unroll)(station, namespace)
+            yield {self._parameter.label: {"unit": self._parameter.units, "value": value}}
 
 
-class SetterProduct(BaseSetterObject):
-    def __init__(self, setters):
-        self._setters = setters
+class SweepProduct(BaseSweepObject):
+    def __init__(self, sweep_objects):
+        self._sweep_object = sweep_objects
         super().__init__()
 
     @staticmethod
-    def _two_product(setter_object1, setter_object2):
-        def inner(station, namespace):
-            for result1 in setter_object1(station, namespace):
-                for result2 in setter_object2(station, namespace):
+    def _two_product(sweep_object1, sweep_object2):
+        def inner():
+            for result1 in sweep_object1:
+                for result2 in sweep_object2:
                     result2.update(result1)
                     yield result2
+        return inner()
 
-        return inner
+    def _setter_function(self):
+        prod = self._sweep_object[-1]
+        for sweep_object in self._sweep_object[-2::-1]:
+            prod = SweepProduct._two_product(prod, sweep_object)
+        return prod
 
-    def __call__(self, station, namespace):
-        setter_product = self._setters[-1]
-        for setter in self._setters[-2::-1]:
-            setter_product = SetterProduct._two_product(setter_product, setter)
-
-        return self._add_hooks(setter_product)(station, namespace)
-
-
-class SweepObject:
-    def __init__(self, setter):
-        self.setter = setter
-        self._setter_generator = None
-        self._station = None
-        self._namespace = None
-
-    def __next__(self):
-        return next(self._setter_generator)
-
-    def __iter__(self):
-        self._setter_generator = self.setter(self._station, self._namespace)
-        return self
-
-    def before_each(self, before_each):
-        self.setter.before_each(before_each)
-        return self
-
-    def after_each(self, after_each):
-        self.setter.after_each(after_each)
-        return self
-
-    def after_start(self, after_start):
-        self.setter.after_start(after_start)
-        return self
-
-    def after_end(self, after_end):
-        self.setter.after_end(after_end)
-        return self
-
-
-def sweep_object(parameter, point_function):
-
-    if not callable(point_function):
-        _point_function = lambda station, namespace: iter(point_function)
-    else:
-        _point_function = point_function
-
-    setter = SetterObject(parameter, _point_function)
-    return SweepObject(setter)
-
-
-def sweep_product(sweep_objects):
-    setters = [s.setter for s in sweep_objects]
-    return SweepObject(SetterProduct(setters))
