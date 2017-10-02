@@ -5,22 +5,31 @@ class BaseSetterObject:
         pass
 
     def __init__(self):
-        self._before_each = BaseSetterObject.dummy
-        self._after_each = BaseSetterObject.dummy
-        self._after_start = BaseSetterObject.dummy
-        self._after_end = BaseSetterObject.dummy
 
-    def add_before_each(self, before_each):
-        self._before_each = before_each
+        self._measure_functions = {
+            "before_each": [BaseSetterObject.dummy],
+            "after_each": [BaseSetterObject.dummy],
+            "after_start": [BaseSetterObject.dummy],
+            "after_end": [BaseSetterObject.dummy]
+        }
 
-    def add_after_each(self, after_each):
-        self._after_each = after_each
+        for name in self._measure_functions.keys():
+            setattr(self, name, self._add_measure_function(name))
+            setattr(self, "execute_{}".format(name), self._execute_measure_function(name))
 
-    def add_after_start(self, after_start):
-        self._after_start = after_start
+    def _add_measure_function(self, name):
+        def inner(func):
+            if callable(func):
+                self._measure_functions[name].append(func)
+            else:
+                self._measure_functions[name].extend(func)
+        return inner
 
-    def add_after_end(self, after_end):
-        self._after_end = after_end
+    def _execute_measure_function(self, name):
+        def inner(station, namespace):
+            for func in self._measure_functions[name]:
+                func(station, namespace)
+        return inner
 
 
 class SetterObject(BaseSetterObject):
@@ -30,7 +39,12 @@ class SetterObject(BaseSetterObject):
         self._point_function = point_function
         super().__init__()
 
+    def unrole(self, station, namespace):
+        for value in self._point_function(station, namespace):
+            yield {self._parameter.name: {"units": self._parameter.units, "value": value}}
+
     def __call__(self, station, namespace):
+        #setter_generator = (self._parameter.set(value) for value in  self._point_function(station, namespace))
         value_generator = self._point_function(station, namespace)
 
         start = True
@@ -41,17 +55,17 @@ class SetterObject(BaseSetterObject):
                 value = next(value_generator)
             except StopIteration:
                 stop = True
-                self._after_end(station, namespace)
+                self.execute_after_end(station, namespace)
                 continue
 
-            self._before_each(station, namespace)
+            self.execute_before_each(station, namespace)
             self._parameter.set(value)
-            self._after_each(station, namespace)
+            self.execute_after_each(station, namespace)
 
             yield {self._parameter.name: {"units": self._parameter.units, "value": value}}
 
             if start:
-                self._after_start(station, namespace)
+                self.execute_after_start(station, namespace)
                 start = False
 
 
@@ -71,16 +85,31 @@ class SetterProduct(BaseSetterObject):
         return inner
 
     def __call__(self, station, namespace):
-        self._setters[0].add_before_each(self._before_each)
-        self._setters[0].add_after_each(self._after_each)
-        self._setters[0].add_after_start(self._after_start)
-        self._setters[-1].add_after_end(self._after_end)
-
         setter_product = self._setters[-1]
         for setter in self._setters[-2::-1]:
             setter_product = SetterProduct._two_product(setter_product, setter)
 
+        setter_product = self._add_hooks(setter_product)
         return setter_product(station, namespace)
+
+    def _add_hooks(self, generator):
+
+        def hooked_generator(station, namespace):
+            self.execute_before_each(station, namespace)
+            start = True
+            for value in generator(station, namespace):
+
+                if start:
+                    self.execute_after_start(station, namespace)
+                    start = False
+
+                self.execute_after_each(station, namespace)
+                yield value
+                self.execute_before_each(station, namespace)
+
+            self.execute_after_end(station, namespace)
+
+        return hooked_generator
 
 
 class SweepObject:
@@ -90,16 +119,27 @@ class SweepObject:
         self._station = None
         self._namespace = None
 
-        self.add_before_each = self.setter.add_before_each
-        self.add_after_each = self.setter.add_after_each
-        self.add_after_start = self.setter.add_after_start
-        self.add_after_end = self.setter.add_after_end
-
     def __next__(self):
         return next(self._setter_generator)
 
     def __iter__(self):
         self._setter_generator = self.setter(self._station, self._namespace)
+        return self
+
+    def before_each(self, before_each):
+        self.setter.before_each(before_each)
+        return self
+
+    def after_each(self, after_each):
+        self.setter.after_each(after_each)
+        return self
+
+    def after_start(self, after_start):
+        self.setter.after_start(after_start)
+        return self
+
+    def after_end(self, after_end):
+        self.setter.after_end(after_end)
         return self
 
 
