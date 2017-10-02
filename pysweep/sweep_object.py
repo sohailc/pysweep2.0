@@ -69,17 +69,25 @@ class BaseSweepObject:
     def __next__(self):
         return next(self._point_generator)
 
+    def set_station(self, station):
+        self._station = station
+
+    def set_namespace(self, namespace):
+        self._namespace = namespace
+
+    def unset_namespace(self):
+        self._namespace = None
+
 
 class SweepObject(BaseSweepObject):
     def __init__(self, parameter, point_function):
         self._parameter = parameter
 
         if not callable(point_function):
-            _point_function = lambda station, namespace: iter(point_function)
+            self._point_function = lambda station, namespace: iter(point_function)
         else:
-            _point_function = point_function
+            self._point_function = point_function
 
-        self._point_function = _point_function
         super().__init__()
 
     def _setter_function(self):
