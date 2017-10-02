@@ -1,25 +1,14 @@
-from qcodes import StandardParameter
 
-from .chain_operators import pass_operator, product_operator
-
-
-class ParameterWrapper:
-
+class BaseSetterObject:
     @staticmethod
-    def dummy_each(station, namespace):
+    def dummy(station, namespace):
         pass
 
-    def __init__(self, param, before_each=None, after_each=None):
-        self._param = param
-        if before_each is None:
-            self._before_each = ParameterWrapper.dummy_each
-        else:
-            self._before_each = before_each
-
-        if after_each is None:
-            self._after_each = ParameterWrapper.dummy_each
-        else:
-            self._after_each = after_each
+    def __init__(self):
+        self._before_each = BaseSetterObject.dummy
+        self._after_each = BaseSetterObject.dummy
+        self._after_start = BaseSetterObject.dummy
+        self._after_end = BaseSetterObject.dummy
 
     def add_before_each(self, before_each):
         self._before_each = before_each
@@ -27,111 +16,104 @@ class ParameterWrapper:
     def add_after_each(self, after_each):
         self._after_each = after_each
 
-    def set(self, value, station, namespace):
-        self._before_each(station, namespace)
-        self._param.set(value)
-        self._after_each(station, namespace)
+    def add_after_start(self, after_start):
+        self._after_start = after_start
 
-    @property
-    def label(self):
-        return self._param.label
-
-    @property
-    def units(self):
-        return self._param.units
+    def add_after_end(self, after_end):
+        self._after_end = after_end
 
 
-class BaseSweepObject:
-    def __init__(self, parameters, point_functions, chain_operator, before_each=None, after_each=None):
-        """
-        Parameters
-        ----------
-        parameters: list, qcodes.StandardParameter
-        point_functions: list, generator_function, n_parameters
-            A list of equal length as the number of parameters. Each generator function accepts two parameters; a
-             QCoDeS Station and a pysweep Namespace. Each "next" operation on the generators gives the next value to be
-             set on the parameters
-        chain_operator: callable
-            Callable which accepts a list of generator functions as input and returns a single generator function. This
-            function accepts two parameters: a QCoDeS Station and a pysweep Namespace
-        """
+class SetterObject(BaseSetterObject):
 
-        self._parameters = [{False: ParameterWrapper(p, before_each, after_each),
-                             True: p
-                             }[isinstance(p, ParameterWrapper)] for p in parameters]
+    def __init__(self, parameter, point_function):
+        self._parameter = parameter
+        self._point_function = point_function
+        super().__init__()
 
-        self._point_functions = point_functions
-        self._chain_operator = chain_operator
+    def __call__(self, station, namespace):
+        value_generator = self._point_function(station, namespace)
 
-        self._point_generator = None
+        start = True
+        stop = False
+        while not stop:
+
+            try:
+                value = next(value_generator)
+            except StopIteration:
+                stop = True
+                self._after_end(station, namespace)
+                continue
+
+            self._before_each(station, namespace)
+            self._parameter.set(value)
+            self._after_each(station, namespace)
+
+            yield {self._parameter.name: {"units": self._parameter.units, "value": value}}
+
+            if start:
+                self._after_start(station, namespace)
+                start = False
+
+
+class SetterProduct(BaseSetterObject):
+    def __init__(self, setters):
+        self._setters = setters
+        super().__init__()
+
+    @staticmethod
+    def _two_product(setter_object1, setter_object2):
+        def inner(station, namespace):
+            for result1 in setter_object1(station, namespace):
+                for result2 in setter_object2(station, namespace):
+                    result2.update(result1)
+                    yield result2
+
+        return inner
+
+    def __call__(self, station, namespace):
+        self._setters[0].add_before_each(self._before_each)
+        self._setters[0].add_after_each(self._after_each)
+        self._setters[0].add_after_start(self._after_start)
+        self._setters[-1].add_after_end(self._after_end)
+
+        setter_product = self._setters[-1]
+        for setter in self._setters[-2::-1]:
+            setter_product = SetterProduct._two_product(setter_product, setter)
+
+        return setter_product(station, namespace)
+
+
+class SweepObject:
+    def __init__(self, setter):
+        self.setter = setter
+        self._setter_generator = None
         self._station = None
         self._namespace = None
-        self._after_each = after_each
-        self._before_each = before_each
+
+        self.add_before_each = self.setter.add_before_each
+        self.add_after_each = self.setter.add_after_each
+        self.add_after_start = self.setter.add_after_start
+        self.add_after_end = self.setter.add_after_end
 
     def __next__(self):
-        values, modify = next(self._point_generator)
-
-        for parameter, value, mdy in zip(self._parameters, values, modify):
-            if mdy:
-                parameter.set(value, self._station, self._namespace)
-
-        return {p.label: {"unit": p.units, "value": v} for p, v in zip(self._parameters, values)}
+        return next(self._setter_generator)
 
     def __iter__(self):
-        self._point_generator = self._chain_operator(self._point_functions)(self._station, self._namespace)
-        return self
-
-    def set_station(self, station):
-        self._station = station
-
-    def set_namespace(self, namespace):
-        self._namespace = namespace
-
-    def unset_namespace(self):
-        self._namespace = None
-
-    def after_each(self, after_each_function):
-        self._parameters[0].add_after_each(after_each_function)
-        return self
-
-    def before_each(self, before_each_function):
-        self._parameters[-1].add_before_each(before_each_function)
+        self._setter_generator = self.setter(self._station, self._namespace)
         return self
 
 
-class SweepObject(BaseSweepObject):
-    def __init__(self, parameter, point_function):
-        """
-        Parameters
-        ----------
-        parameter: list, qcodes.StandardParameter
-        point_function: iterable or a function returning an iterable
-        """
-        if not isinstance(parameter, StandardParameter):
-            raise ValueError("The Parameter should be of type QCoDeS StandardParameter")
+def sweep_object(parameter, point_function):
 
-        if not callable(point_function):
-            _point_function = lambda station, namespace: (i for i in point_function)
-        else:
-            _point_function = point_function
+    if not callable(point_function):
+        _point_function = lambda station, namespace: iter(point_function)
+    else:
+        _point_function = point_function
 
-        super().__init__([parameter], [_point_function], chain_operator=pass_operator)
+    setter = SetterObject(parameter, _point_function)
+    return SweepObject(setter)
 
 
 def sweep_product(sweep_objects):
-    """
-    Parameters
-    ----------
-    sweep_objects: list, SweepObject
-    """
-
-    params = []
-    point_functions = []
-    for p in sweep_objects:
-        params.extend(p._parameters)
-        point_functions.extend(p._point_functions)
-
-    return BaseSweepObject(params, point_functions, chain_operator=product_operator)
-
-
+    setters = [s.setter for s in sweep_objects]
+    return SweepObject(SetterProduct(setters))
