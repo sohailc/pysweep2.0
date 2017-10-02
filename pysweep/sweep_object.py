@@ -1,16 +1,12 @@
 
 class BaseSetterObject:
-    @staticmethod
-    def dummy(station, namespace):
-        return dict()
-
     def __init__(self):
 
         self._measure_functions = {
-            "before_each": [BaseSetterObject.dummy],
-            "after_each": [BaseSetterObject.dummy],
-            "after_start": [BaseSetterObject.dummy],
-            "after_end": [BaseSetterObject.dummy]
+            "before_each": [],
+            "after_each": [],
+            "after_start": [],
+            "after_end": []
         }
 
         for name in self._measure_functions.keys():
