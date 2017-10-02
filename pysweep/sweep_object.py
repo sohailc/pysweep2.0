@@ -2,7 +2,7 @@
 class BaseSetterObject:
     @staticmethod
     def dummy(station, namespace):
-        pass
+        return dict()
 
     def __init__(self):
 
@@ -19,17 +19,48 @@ class BaseSetterObject:
 
     def _add_measure_function(self, name):
         def inner(func):
-            if callable(func):
-                self._measure_functions[name].append(func)
-            else:
-                self._measure_functions[name].extend(func)
+            self._measure_functions[name].append(func)
         return inner
 
     def _execute_measure_function(self, name):
         def inner(station, namespace):
+            msg_all = dict()
             for func in self._measure_functions[name]:
-                func(station, namespace)
+                msg = func(station, namespace)
+                msg_all.update(msg)
+
+            return msg_all
+
         return inner
+
+    def _add_hooks(self, setter_function):
+        def hooked(station, namespace):
+
+            start = True
+            stop = False
+            setter_generator = setter_function(station, namespace)
+
+            while not stop:
+
+                try:
+                    before_msg = self.execute_before_each(station, namespace)
+                    main_msg = next(setter_generator)
+                    after_msg = self.execute_after_each(station, namespace)
+
+                    main_msg.update(before_msg)
+                    main_msg.update(after_msg)
+                    yield main_msg
+
+                except StopIteration:
+                    stop = True
+                    self.execute_after_end(station, namespace)
+                    continue
+
+                if start:
+                    self.execute_after_start(station, namespace)
+                    start = False
+
+        return hooked
 
 
 class SetterObject(BaseSetterObject):
@@ -39,34 +70,13 @@ class SetterObject(BaseSetterObject):
         self._point_function = point_function
         super().__init__()
 
-    def unrole(self, station, namespace):
+    def _unroll(self, station, namespace):
         for value in self._point_function(station, namespace):
+            self._parameter.set(value)
             yield {self._parameter.name: {"units": self._parameter.units, "value": value}}
 
     def __call__(self, station, namespace):
-        #setter_generator = (self._parameter.set(value) for value in  self._point_function(station, namespace))
-        value_generator = self._point_function(station, namespace)
-
-        start = True
-        stop = False
-        while not stop:
-
-            try:
-                value = next(value_generator)
-            except StopIteration:
-                stop = True
-                self.execute_after_end(station, namespace)
-                continue
-
-            self.execute_before_each(station, namespace)
-            self._parameter.set(value)
-            self.execute_after_each(station, namespace)
-
-            yield {self._parameter.name: {"units": self._parameter.units, "value": value}}
-
-            if start:
-                self.execute_after_start(station, namespace)
-                start = False
+        return self._add_hooks(self._unroll)(station, namespace)
 
 
 class SetterProduct(BaseSetterObject):
@@ -89,27 +99,7 @@ class SetterProduct(BaseSetterObject):
         for setter in self._setters[-2::-1]:
             setter_product = SetterProduct._two_product(setter_product, setter)
 
-        setter_product = self._add_hooks(setter_product)
-        return setter_product(station, namespace)
-
-    def _add_hooks(self, generator):
-
-        def hooked_generator(station, namespace):
-            self.execute_before_each(station, namespace)
-            start = True
-            for value in generator(station, namespace):
-
-                if start:
-                    self.execute_after_start(station, namespace)
-                    start = False
-
-                self.execute_after_each(station, namespace)
-                yield value
-                self.execute_before_each(station, namespace)
-
-            self.execute_after_end(station, namespace)
-
-        return hooked_generator
+        return self._add_hooks(setter_product)(station, namespace)
 
 
 class SweepObject:
