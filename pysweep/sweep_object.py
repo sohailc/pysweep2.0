@@ -2,6 +2,11 @@ import qcodes
 
 
 class BaseSweepObject:
+
+    @classmethod
+    def add_alias(cls, name, func):
+        setattr(cls, name, lambda so, *args: func(so, *args))
+
     def __init__(self):
 
         self._point_generator = None
@@ -139,7 +144,7 @@ class SweepZip(BaseSweepObject):
         return combined
 
     def _setter_factory(self):
-        for results in zip(self._sweep_objects):
+        for results in zip(*self._sweep_objects):
             yield SweepZip._combine_dictionaries(results)
 
 # --------------  Sweep Factories ----------------------------------------------------------------------------

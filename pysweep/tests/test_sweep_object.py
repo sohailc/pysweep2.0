@@ -1,7 +1,8 @@
 from collections import OrderedDict
 
 import pysweep
-from pysweep.sweep_object import sweep_object, sweep_product
+import pysweep.utils
+from pysweep.sweep_object import sweep_object, sweep_product, sweep_zip, BaseSweepObject
 import qcodes
 
 
@@ -280,3 +281,165 @@ def test_after_start():
 
     compare_out = namespace.measurement
     assert all([i == j for i,j in zip(test_out, compare_out)])
+
+
+def test_zip():
+
+    std_out = StdIOMock()
+    param1 = make_parameter("label1", std_out)
+    param2 = make_parameter("label2", std_out)
+    param3 = make_parameter("label3", std_out)
+    param4 = make_parameter("label4", std_out)
+
+    sweep_values1 = [1, 2]
+    sweep_values2 = [1, 2, 3]
+    sweep_values3 = [0, 1, 2]
+    sweep_values4 = range(10)
+
+    # Test that this ...
+    for i in sweep_zip(
+        sweep_object(param1, sweep_values1),
+        sweep_object(param2, sweep_values2),
+        sweep_object(param3, sweep_values3),
+        sweep_object(param4, sweep_values4),
+    ):
+        std_out.print(sorted_dict(i))
+
+    test_out = str(std_out)
+    std_out.flush()
+
+    # Is equivalent to this
+    for value1, value2, value3, value4 in zip(sweep_values1, sweep_values2, sweep_values3, sweep_values4):
+        param1.set(value1)
+        param2.set(value2)
+        param3.set(value3)
+        param4.set(value4)
+
+        values = [value1, value2, value3, value4]
+        params = [param1, param2, param3, param4]
+
+        dct = sorted_dict({p.label: {"unit": p.units, "value": value} for p, value in zip(params, values)})
+        std_out.print(dct)
+
+    compare_out = str(std_out)
+    assert test_out == compare_out
+
+
+def test_product_zip():
+
+    std_out = StdIOMock()
+    param1 = make_parameter("label1", std_out)
+    param2 = make_parameter("label2", std_out)
+    param3 = make_parameter("label3", std_out)
+    param4 = make_parameter("label4", std_out)
+
+    sweep_values1 = [1, 2, 3]
+    sweep_values2 = [4, 5, 6]
+    sweep_values3 = [8, 1, 3]
+    sweep_values4 = [10, 12, 0]
+
+    # Test that this ...
+    for i in sweep_product(
+        sweep_zip(
+            sweep_object(param1, sweep_values1),
+            sweep_object(param2, sweep_values2)
+        ),
+        sweep_zip(
+            sweep_object(param3, sweep_values3),
+            sweep_object(param4, sweep_values4)
+        )
+    ):
+        std_out.print(sorted_dict(i))
+
+    test_out = str(std_out)
+    std_out.flush()
+
+    # Is equivalent to this
+    for value3, value4 in zip(sweep_values3, sweep_values4):
+        param3.set(value3)
+        param4.set(value4)
+        for value1, value2 in zip(sweep_values1, sweep_values2):
+            param1.set(value1)
+            param2.set(value2)
+
+            values = [value1, value2, value3, value4]
+            params = [param1, param2, param3, param4]
+
+            dct = sorted_dict({p.label: {"unit": p.units, "value": value} for p, value in zip(params, values)})
+            std_out.print(dct)
+
+    compare_out = str(std_out)
+    assert test_out == compare_out
+
+
+def test_zip_product():
+
+    std_out = StdIOMock()
+    param1 = make_parameter("label1", std_out)
+    param2 = make_parameter("label2", std_out)
+    param3 = make_parameter("label3", std_out)
+    param4 = make_parameter("label4", std_out)
+
+    sweep_values1 = [1, 2, 3]
+    sweep_values2 = [4, 5, 6]
+    sweep_values3 = [8, 1, 3]
+    sweep_values4 = [10, 12, 0]
+
+    # Test that this ...
+    for i in sweep_zip(
+        sweep_product(
+            sweep_object(param1, sweep_values1),
+            sweep_object(param2, sweep_values2)
+        ),
+        sweep_product(
+            sweep_object(param3, sweep_values3),
+            sweep_object(param4, sweep_values4)
+        )
+    ):
+        std_out.print(sorted_dict(i))
+
+    test_out = str(std_out)
+    std_out.flush()
+
+    # Is equivalent to this
+    def gen1():
+        for value2 in sweep_values2:
+            param2.set(value2)
+            for value1 in sweep_values1:
+                param1.set(value1)
+
+                values = [value1, value2]
+                params = [param1, param2]
+                yield sorted_dict({p.label: {"unit": p.units, "value": value} for p, value in zip(params, values)})
+
+    def gen2():
+        for value4 in sweep_values4:
+            param4.set(value4)
+            for value3 in sweep_values3:
+                param3.set(value3)
+
+                values = [value3, value4]
+                params = [param3, param3]
+                yield sorted_dict({p.label: {"unit": p.units, "value": value} for p, value in zip(params, values)})
+
+    for d1, d2 in zip(gen1(), gen2()):
+        dct = {}
+        dct.update(d1)
+        dct.update(d2)
+        std_out.print(dct)
+
+
+    compare_out = str(std_out)
+    assert test_out == compare_out
+
+
+def test_alias():
+
+    BaseSweepObject.add_alias("sleep", lambda so, t: so.after_each(pysweep.utils.pysleep(t)))
+
+    std_out = StdIOMock()
+    param1 = make_parameter("label1", std_out)
+    sweep_values1 = [1, 2, 3]
+
+    for i in sweep_object(param1, sweep_values1).sleep(4):
+        print(i)
