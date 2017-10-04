@@ -1,4 +1,5 @@
 from collections import OrderedDict
+import time
 
 import pysweep
 import pysweep.utils
@@ -419,15 +420,14 @@ def test_zip_product():
                 param3.set(value3)
 
                 values = [value3, value4]
-                params = [param3, param3]
+                params = [param3, param4]
                 yield sorted_dict({p.label: {"unit": p.units, "value": value} for p, value in zip(params, values)})
 
     for d1, d2 in zip(gen1(), gen2()):
         dct = {}
         dct.update(d1)
         dct.update(d2)
-        std_out.print(dct)
-
+        std_out.print(sorted_dict(dct))
 
     compare_out = str(std_out)
     assert test_out == compare_out
@@ -441,5 +441,7 @@ def test_alias():
     param1 = make_parameter("label1", std_out)
     sweep_values1 = [1, 2, 3]
 
+    tb = time.time()
     for i in sweep_object(param1, sweep_values1).sleep(4):
-        print(i)
+        tm = time.time() - tb
+        print("{:.2}".format(tm))
