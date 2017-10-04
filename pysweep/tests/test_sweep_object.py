@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
-from pysweep import Namespace
-from pysweep.sweep_object import SweepObject, SweepProduct
+import pysweep
+from pysweep.sweep_object import sweep_object, sweep_product
 import qcodes
 
 
@@ -42,10 +42,11 @@ def test_sanity():
     param_label = "param1"
     values = [1, 2]
 
-    # Test that this ...
     std_out = StdIOMock()
     param = make_parameter(param_label, std_out)
-    for i in SweepObject(param, values):
+
+    # Test that this ...
+    for i in sweep_object(param, values):
         std_out.print(sorted_dict(i))
 
     test_out = str(std_out)
@@ -63,31 +64,44 @@ def test_sanity():
 
 def test_product():
 
-    param_labels = ["param1", "param2", "param3"]
-    param_values = [[1, 2], [9, 10, 2], range(100)]
+    std_out = StdIOMock()
+    param1 = make_parameter("label1", std_out)
+    param2 = make_parameter("label2", std_out)
+    param3 = make_parameter("label3", std_out)
+    param4 = make_parameter("label4", std_out)
+
+    sweep_values1 = [1, 2]
+    sweep_values2 = [1, 2, 3]
+    sweep_values3 = [0, 1, 2]
+    sweep_values4 = range(100)
 
     # Test that this ...
-    std_out = StdIOMock()
-    params = [make_parameter(param_label, std_out) for param_label in param_labels]
-    sweep_objects = [SweepObject(test_param, values) for test_param, values in zip(params, param_values)]
-
-    for i in SweepProduct(sweep_objects):
+    for i in sweep_product(
+        sweep_object(param1, sweep_values1),
+        sweep_object(param2, sweep_values2),
+        sweep_object(param3, sweep_values3),
+        sweep_object(param4, sweep_values4),
+    ):
         std_out.print(sorted_dict(i))
 
     test_out = str(std_out)
     std_out.flush()
 
     # Is equivalent to this
-    for value3 in param_values[2]:
-        params[2].set(value3)
-        for value2 in param_values[1]:
-            params[1].set(value2)
-            for value1 in param_values[0]:
-                params[0].set(value1)
-                values = [value1, value2, value3]
+    for value4 in sweep_values4:
+        param4.set(value4)
+        for value3 in sweep_values3:
+            param3.set(value3)
+            for value2 in sweep_values2:
+                param2.set(value2)
+                for value1 in sweep_values1:
+                    param1.set(value1)
 
-                dct = sorted_dict({p.label: {"unit": p.units, "value": value} for p, value in zip(params, values)})
-                std_out.print(dct)
+                    values = [value1, value2, value3, value4]
+                    params = [param1, param2, param3, param4]
+
+                    dct = sorted_dict({p.label: {"unit": p.units, "value": value} for p, value in zip(params, values)})
+                    std_out.print(dct)
 
     compare_out = str(std_out)
     assert test_out == compare_out
@@ -99,196 +113,170 @@ def test_after_each():
         return {"some measurement": hash(str(std_out))}
 
     std_out = StdIOMock()
-    param1 = make_parameter("param1", std_out)
-    param2 = make_parameter("param2", std_out)
-    param3 = make_parameter("param3", std_out)
+    param1 = make_parameter("label1", std_out)
+    param2 = make_parameter("label2", std_out)
+    param3 = make_parameter("label3", std_out)
+    param4 = make_parameter("label4", std_out)
 
-    range1 = [3, 1]
-    range2 = [1, 2]
-    range3 = [7, 10]
-    test_out = []
-
-    # Test that this ...
-    for i in SweepProduct([
-        SweepObject(param1, range1),
-        SweepObject(param2, range2).after_each(measure),
-        SweepObject(param3, range3)
-    ]):
-        test_out.append(i)
-
-    std_out.flush()
-    compare_out = []
-
-    # Is equivalent to this
-    for value3 in range3:
-        param3.set(value3)
-        out_dict3 = {param3.label: {"unit": param3.units, "value": value3}}
-        for value2 in range2:
-
-            param2.set(value2)
-            out_dict2 = {param2.label: {"unit": param2.units, "value": value2}}
-            measure_dict = measure(None, None)  # Notice that the measurement is called after setting param2
-
-            for value1 in range1:
-                param1.set(value1)
-                out_dict1 = {param1.label: {"unit": param1.units, "value": value1}}
-                compare_out.append(merge_dicts([out_dict1, out_dict2, out_dict3, measure_dict]))
-
-    assert all([test == compare for test, compare in zip(test_out, compare_out)])
-
-
-def test_before_each():
-
-    def measure(station, namespace):
-        return {"some measurement": hash(str(std_out))}
-
-    std_out = StdIOMock()
-    param1 = make_parameter("param1", std_out)
-    param2 = make_parameter("param2", std_out)
-    param3 = make_parameter("param3", std_out)
-
-    range1 = [3, 1]
-    range2 = [1, 2]
-    range3 = [7, 10]
-    test_out = []
+    sweep_values1 = [1, 2]
+    sweep_values2 = [1, 2, 3]
+    sweep_values3 = [0, 1, 2]
+    sweep_values4 = [0, 1]
 
     # Test that this ...
-    for i in SweepProduct([
-        SweepObject(param1, range1),
-        SweepObject(param2, range2).before_each(measure),
-        SweepObject(param3, range3)
-    ]):
-        test_out.append(i)
+    for i in sweep_product(
+            sweep_object(param1, sweep_values1),
+            sweep_object(param2, sweep_values2),
+            sweep_object(param3, sweep_values3).after_each(measure),
+            sweep_object(param4, sweep_values4),
+    ):
+        std_out.print(sorted_dict(i))
 
+    test_out = str(std_out)
     std_out.flush()
-    compare_out = []
 
     # Is equivalent to this
-    for value3 in range3:
-        param3.set(value3)
-        out_dict3 = {param3.label: {"unit": param3.units, "value": value3}}
-        for value2 in range2:
+    for value4 in sweep_values4:
+        param4.set(value4)
+        for value3 in sweep_values3:
 
-            measure_dict = measure(None, None)  # Notice that the measurement is called before setting param2
-            param2.set(value2)
-            out_dict2 = {param2.label: {"unit": param2.units, "value": value2}}
+            param3.set(value3)
+            measure_dict = measure(None, None)
 
-            for value1 in range1:
-                param1.set(value1)
-                out_dict1 = {param1.label: {"unit": param1.units, "value": value1}}
-                compare_out.append(merge_dicts([out_dict1, out_dict2, out_dict3, measure_dict]))
+            for value2 in sweep_values2:
+                param2.set(value2)
+                for value1 in sweep_values1:
+                    param1.set(value1)
 
-    assert all([test == compare for test, compare in zip(test_out, compare_out)])
+                    values = [value1, value2, value3, value4]
+                    params = [param1, param2, param3, param4]
+
+                    dct = sorted_dict({p.label: {"unit": p.units, "value": value} for p, value in zip(params, values)})
+                    dct.update(measure_dict)
+                    std_out.print(dct)
+
+    compare_out = str(std_out)
+    assert test_out == compare_out
 
 
 def test_after_end():
 
-    def measure(station, namespace):
-        std_out_hash = hash(str(std_out))
-        if not hasattr(namespace, "std_out_hash"):
-            namespace.std_out_hash = [std_out_hash]
+    def measure(station, ns):
+        if not hasattr(ns, "measurements"):
+            ns.measurement = [hash(str(std_out))]
         else:
-            namespace.std_out_hash.append(std_out_hash)
+            ns.measurement.append(hash(str(std_out)))
 
         return {}
 
     std_out = StdIOMock()
-    param1 = make_parameter("param1", std_out)
-    param2 = make_parameter("param2", std_out)
-    param3 = make_parameter("param3", std_out)
+    namespace = pysweep.Namespace
+    param1 = make_parameter("label1", std_out)
+    param2 = make_parameter("label2", std_out)
+    param3 = make_parameter("label3", std_out)
+    param4 = make_parameter("label4", std_out)
 
-    range1 = [3, 1]
-    range2 = [1, 2]
-    range3 = [7, 10]
-    sweep_objects = []
-    namespace = Namespace()
-
-    for param, range in zip([param1, param2, param3], [range1, range2, range3]):
-        sweep_object = SweepObject(param, range)
-        sweep_object.set_namespace(namespace)
-        sweep_objects.append(sweep_object)
-
-    sweep_objects[1] = sweep_objects[1].after_end(measure)
+    sweep_values1 = [1, 2]
+    sweep_values2 = [1, 2, 3]
+    sweep_values3 = [0, 1, 2]
+    sweep_values4 = [0, 1]
 
     # Test that this ...
-    for _ in SweepProduct(sweep_objects):
-        pass
+    for i in sweep_product(
+            sweep_object(param1, sweep_values1),
+            sweep_object(param2, sweep_values2),
+            sweep_object(param3, sweep_values3).after_end(measure).set_namespace(namespace),
+            sweep_object(param4, sweep_values4),
+    ):
+        std_out.print(sorted_dict(i))
 
+    test_out = namespace.measurement
+    namespace = pysweep.Namespace  # A fresh namespace
     std_out.flush()
-    hashes_test = namespace.std_out_hash
-    namespace = Namespace()  # A fresh namespace
 
     # Is equivalent to this
-    for count, value3 in enumerate(range3):
-        if count != 0:
-            measure(None, namespace)  # After the end of the sweep of parameter 2, we will begin the sweep of
-            # parameter 3, except at the start of our measurement.
+    for count, value4 in enumerate(sweep_values4):
+        if count > 0:
+            measure(None, namespace)
 
-        param3.set(value3)
+        param4.set(value4)
+        for value3 in sweep_values3:
+            param3.set(value3)
 
-        for value2 in range2:
-            param2.set(value2)
+            for value2 in sweep_values2:
+                param2.set(value2)
+                for value1 in sweep_values1:
+                    param1.set(value1)
 
-            for value1 in range1:
-                param1.set(value1)
+                    values = [value1, value2, value3, value4]
+                    params = [param1, param2, param3, param4]
 
-    measure(None, namespace)  # At the end of the measurement (that is, after the end of the sweep of parameter 3)
-    # the measure function will be called again.
+                    dct = sorted_dict({p.label: {"unit": p.units, "value": value} for p, value in zip(params, values)})
+                    std_out.print(dct)
 
-    hashes_compare = namespace.std_out_hash
-    assert all([i == j for i, j in zip(hashes_test, hashes_compare)])
+    measure(None, namespace)  # Notice that we need to run measure at the very end again.
+    compare_out = namespace.measurement
+    assert all([i == j for i,j in zip(test_out, compare_out)])
 
 
 def test_after_start():
 
-    def measure(station, namespace):
-        std_out_hash = hash(str(std_out))
-        if not hasattr(namespace, "std_out_hash"):
-            namespace.std_out_hash = [std_out_hash]
+    def measure(station, ns):
+        if not hasattr(ns, "measurements"):
+            ns.measurement = [hash(str(std_out))]
         else:
-            namespace.std_out_hash.append(std_out_hash)
+            ns.measurement.append(hash(str(std_out)))
 
         return {}
 
     std_out = StdIOMock()
-    param1 = make_parameter("param1", std_out)
-    param2 = make_parameter("param2", std_out)
-    param3 = make_parameter("param3", std_out)
+    namespace = pysweep.Namespace
+    param1 = make_parameter("label1", std_out)
+    param2 = make_parameter("label2", std_out)
+    param3 = make_parameter("label3", std_out)
+    param4 = make_parameter("label4", std_out)
 
-    range1 = [3, 1]
-    range2 = [1, 2]
-    range3 = [7, 10]
-    sweep_objects = []
-    namespace = Namespace()
-
-    for param, range in zip([param1, param2, param3], [range1, range2, range3]):
-        sweep_object = SweepObject(param, range)
-        sweep_object.set_namespace(namespace)
-        sweep_objects.append(sweep_object)
-
-    sweep_objects[1] = sweep_objects[1].after_start(measure)
+    sweep_values1 = [1, 2]
+    sweep_values2 = [1, 2, 3]
+    sweep_values3 = [0, 1, 2]
+    sweep_values4 = [0, 1]
 
     # Test that this ...
-    for _ in SweepProduct(sweep_objects):
-        pass
+    for i in sweep_product(
+            sweep_object(param1, sweep_values1),
+            sweep_object(param2, sweep_values2),
+            sweep_object(param3, sweep_values3).after_start(measure).set_namespace(namespace),
+            sweep_object(param4, sweep_values4),
+    ):
+        std_out.print(sorted_dict(i))
 
+    test_out = namespace.measurement
+    namespace = pysweep.Namespace  # A fresh namespace
     std_out.flush()
-    hashes_test = namespace.std_out_hash
-    namespace = Namespace()  # A fresh namespace
 
     # Is equivalent to this
-    for value3 in range3:
-        param3.set(value3)
+    for value4 in sweep_values4:
+        param4.set(value4)
+        start = True
 
-        for count, value2 in enumerate(range2):
+        for value3 in sweep_values3:
+            param3.set(value3)
 
-            if count != 0:
+            if start:
                 measure(None, namespace)
+                start = False
 
-            param2.set(value2)
+            for value2 in sweep_values2:
+                param2.set(value2)
 
-            for value1 in range1:
-                param1.set(value1)
+                for value1 in sweep_values1:
+                    param1.set(value1)
 
-    hashes_compare = namespace.std_out_hash
-    assert all([i == j for i, j in zip(hashes_test, hashes_compare)])
+                    values = [value1, value2, value3, value4]
+                    params = [param1, param2, param3, param4]
+
+                    dct = sorted_dict({p.label: {"unit": p.units, "value": value} for p, value in zip(params, values)})
+                    std_out.print(dct)
+
+    compare_out = namespace.measurement
+    assert all([i == j for i,j in zip(test_out, compare_out)])

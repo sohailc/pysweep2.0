@@ -1,5 +1,5 @@
 from pysweep import Namespace
-from pysweep.sweep_object import SweepObject, sweep_product
+from pysweep.sweep_object import SweepParameter, sweep_product
 
 
 class Measurement:
