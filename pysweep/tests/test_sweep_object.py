@@ -1,447 +1,422 @@
-from collections import OrderedDict
 import time
 
 import pysweep
 import pysweep.utils
 from pysweep.sweep_object import sweep_object, sweep_product, sweep_zip, BaseSweepObject
-import qcodes
+
+from .testing_utilities import sorted_dict, StdIOMock, ParameterFactory, SweepValuesFactory
 
 
-class StdIOMock:
-    def __init__(self):
-        self._buffer = ""
+def equivalence_test(test_function, compare_function):
 
-    def print(self, value):
-        self._buffer += "\n" + str(value)
+    def measure(station, namespace):
+        hs = hash(str(stdio_mock))
+        if not hasattr(namespace, "measurements"):
+            namespace.measurement = [hs]
+        else:
+            namespace.measurement.append(hs)
 
-    def __repr__(self):
-        return self._buffer
+        stdio_mock.print("measurement returns {}".format(hs))
+        return {"some measurement": hs}
 
-    def flush(self):
-        self._buffer = ""
+    stdio_mock = StdIOMock()
+    args = (ParameterFactory(stdio_mock), SweepValuesFactory(), stdio_mock, measure, pysweep.Namespace())
 
+    test_out = test_function(*args)
+    stdio_mock.flush()
+    compare_out = compare_function(*args)
 
-def make_parameter(label, std_out):
-    def setter(v):
-        std_out.print("setting {} to {}".format(label, v))
-
-    return qcodes.StandardParameter(label, set_cmd=setter, units="V")
-
-
-def merge_dicts(dicts):
-    merged_dict = {}
-    for d in dicts:
-        for k, v in d.items():
-            merged_dict[k] = v
-    return merged_dict
-
-
-def sorted_dict(dct):
-    return OrderedDict(sorted(dct.items(), key=lambda t: t[0]))
+    assert test_out == compare_out
 
 
 def test_sanity():
-    param_label = "param1"
-    values = [1, 2]
-
-    std_out = StdIOMock()
-    param = make_parameter(param_label, std_out)
 
     # Test that this ...
-    for i in sweep_object(param, values):
-        std_out.print(sorted_dict(i))
+    def test(params, values, stdio, measure, namespace):
+        for i in sweep_object(params[0], values[0]):
+            stdio.print(sorted_dict(i))
 
-    test_out = str(std_out)
-    std_out.flush()
+        return str(stdio)
 
     # Is equivalent to this
-    for value in values:
-        param.set(value)
-        dct = sorted_dict({param.label: {"unit": param.units, "value": value}})
-        std_out.print(dct)
+    def compare(params, values, stdio, measure, namespace):
+        for value in values[0]:
+            params[0].set(value)
+            dct = sorted_dict({params[0].label: {"unit": params[0].units, "value": value}})
+            stdio.print(dct)
 
-    compare_out = str(std_out)
-    assert test_out == compare_out
+        return str(stdio)
+
+    equivalence_test(test, compare)
 
 
 def test_product():
 
-    std_out = StdIOMock()
-    param1 = make_parameter("label1", std_out)
-    param2 = make_parameter("label2", std_out)
-    param3 = make_parameter("label3", std_out)
-    param4 = make_parameter("label4", std_out)
+    def test(params, values, stdio, measure, namespace):
 
-    sweep_values1 = [1, 2]
-    sweep_values2 = [1, 2, 3]
-    sweep_values3 = [0, 1, 2]
-    sweep_values4 = range(100)
+        param1, param2, param3, param4 = params[:4]
+        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
 
-    # Test that this ...
-    for i in sweep_product(
-        sweep_object(param1, sweep_values1),
-        sweep_object(param2, sweep_values2),
-        sweep_object(param3, sweep_values3),
-        sweep_object(param4, sweep_values4),
-    ):
-        std_out.print(sorted_dict(i))
+        for i in sweep_product(
+            sweep_object(param1, sweep_values1),
+            sweep_object(param2, sweep_values2),
+            sweep_object(param3, sweep_values3),
+            sweep_object(param4, sweep_values4),
+        ):
+            stdio.print(sorted_dict(i))
 
-    test_out = str(std_out)
-    std_out.flush()
+        return str(stdio)
 
-    # Is equivalent to this
-    for value4 in sweep_values4:
-        param4.set(value4)
-        for value3 in sweep_values3:
-            param3.set(value3)
-            for value2 in sweep_values2:
-                param2.set(value2)
-                for value1 in sweep_values1:
-                    param1.set(value1)
+    def compare(params, values, stdio, measure, namespace):
 
-                    values = [value1, value2, value3, value4]
-                    params = [param1, param2, param3, param4]
+        param1, param2, param3, param4 = params[:4]
+        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
 
-                    dct = sorted_dict({p.label: {"unit": p.units, "value": value} for p, value in zip(params, values)})
-                    std_out.print(dct)
+        for value4 in sweep_values4:
+            param4.set(value4)
+            for value3 in sweep_values3:
+                param3.set(value3)
+                for value2 in sweep_values2:
+                    param2.set(value2)
+                    for value1 in sweep_values1:
+                        param1.set(value1)
 
-    compare_out = str(std_out)
-    assert test_out == compare_out
+                        values = [value1, value2, value3, value4]
+                        params = [param1, param2, param3, param4]
+
+                        dct = sorted_dict(
+                            {p.label: {"unit": p.units, "value": value} for p, value in zip(params, values)})
+                        stdio.print(dct)
+
+        return str(stdio)
+
+    equivalence_test(test, compare)
 
 
 def test_after_each():
 
-    def measure(station, namespace):
-        return {"some measurement": hash(str(std_out))}
+    def test(params, values, stdio, measure, namespace):
 
-    std_out = StdIOMock()
-    param1 = make_parameter("label1", std_out)
-    param2 = make_parameter("label2", std_out)
-    param3 = make_parameter("label3", std_out)
-    param4 = make_parameter("label4", std_out)
+        param1, param2, param3, param4 = params[:4]
+        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
 
-    sweep_values1 = [1, 2]
-    sweep_values2 = [1, 2, 3]
-    sweep_values3 = [0, 1, 2]
-    sweep_values4 = [0, 1]
+        for i in sweep_product(
+                sweep_object(param1, sweep_values1),
+                sweep_object(param2, sweep_values2),
+                sweep_object(param3, sweep_values3).after_each(measure).set_namespace(namespace),
+                sweep_object(param4, sweep_values4),
+        ):
+            stdio.print(sorted_dict(i))
 
-    # Test that this ...
-    for i in sweep_product(
-            sweep_object(param1, sweep_values1),
-            sweep_object(param2, sweep_values2),
-            sweep_object(param3, sweep_values3).after_each(measure),
-            sweep_object(param4, sweep_values4),
-    ):
-        std_out.print(sorted_dict(i))
+        return str(stdio)
 
-    test_out = str(std_out)
-    std_out.flush()
+    def compare(params, values, stdio, measure, namespace):
 
-    # Is equivalent to this
-    for value4 in sweep_values4:
-        param4.set(value4)
-        for value3 in sweep_values3:
+        param1, param2, param3, param4 = params[:4]
+        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
 
-            param3.set(value3)
-            measure_dict = measure(None, None)
+        for value4 in sweep_values4:
+            param4.set(value4)
+            for value3 in sweep_values3:
 
-            for value2 in sweep_values2:
-                param2.set(value2)
-                for value1 in sweep_values1:
-                    param1.set(value1)
+                param3.set(value3)
+                measure_dict = measure(None, namespace)
 
-                    values = [value1, value2, value3, value4]
-                    params = [param1, param2, param3, param4]
+                for value2 in sweep_values2:
+                    param2.set(value2)
+                    for value1 in sweep_values1:
+                        param1.set(value1)
 
-                    dct = sorted_dict({p.label: {"unit": p.units, "value": value} for p, value in zip(params, values)})
-                    dct.update(measure_dict)
-                    std_out.print(dct)
+                        values = [value1, value2, value3, value4]
+                        params = [param1, param2, param3, param4]
 
-    compare_out = str(std_out)
-    assert test_out == compare_out
+                        dct = sorted_dict({p.label: {"unit": p.units, "value": value}
+                                           for p, value in zip(params, values)})
+                        dct.update(measure_dict)
+                        stdio.print(dct)
+
+        return str(stdio)
+
+    equivalence_test(test, compare)
 
 
 def test_after_end():
 
-    def measure(station, ns):
-        if not hasattr(ns, "measurements"):
-            ns.measurement = [hash(str(std_out))]
-        else:
-            ns.measurement.append(hash(str(std_out)))
+    def test(params, values, stdio, measure, namespace):
 
-        return {}
+        param1, param2, param3, param4 = params[:4]
+        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
 
-    std_out = StdIOMock()
-    namespace = pysweep.Namespace
-    param1 = make_parameter("label1", std_out)
-    param2 = make_parameter("label2", std_out)
-    param3 = make_parameter("label3", std_out)
-    param4 = make_parameter("label4", std_out)
+        for i in sweep_product(
+                sweep_object(param1, sweep_values1),
+                sweep_object(param2, sweep_values2),
+                sweep_object(param3, sweep_values3).after_end(measure).set_namespace(namespace),
+                sweep_object(param4, sweep_values4),
+        ):
+            stdio.print(sorted_dict(i))
 
-    sweep_values1 = [1, 2]
-    sweep_values2 = [1, 2, 3]
-    sweep_values3 = [0, 1, 2]
-    sweep_values4 = [0, 1]
+        return str(stdio)
 
-    # Test that this ...
-    for i in sweep_product(
-            sweep_object(param1, sweep_values1),
-            sweep_object(param2, sweep_values2),
-            sweep_object(param3, sweep_values3).after_end(measure).set_namespace(namespace),
-            sweep_object(param4, sweep_values4),
-    ):
-        std_out.print(sorted_dict(i))
+    def compare(params, values, stdio, measure, namespace):
 
-    test_out = namespace.measurement
-    namespace = pysweep.Namespace  # A fresh namespace
-    std_out.flush()
+        param1, param2, param3, param4 = params[:4]
+        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
 
-    # Is equivalent to this
-    for count, value4 in enumerate(sweep_values4):
-        if count > 0:
-            measure(None, namespace)
+        for count, value4 in enumerate(sweep_values4):
+            if count > 0:
+                measure(None, namespace)
 
-        param4.set(value4)
-        for value3 in sweep_values3:
-            param3.set(value3)
+            param4.set(value4)
+            for value3 in sweep_values3:
+                param3.set(value3)
 
-            for value2 in sweep_values2:
-                param2.set(value2)
-                for value1 in sweep_values1:
-                    param1.set(value1)
+                for value2 in sweep_values2:
+                    param2.set(value2)
 
-                    values = [value1, value2, value3, value4]
-                    params = [param1, param2, param3, param4]
+                    for value1 in sweep_values1:
+                        param1.set(value1)
 
-                    dct = sorted_dict({p.label: {"unit": p.units, "value": value} for p, value in zip(params, values)})
-                    std_out.print(dct)
+                        values = [value1, value2, value3, value4]
+                        params = [param1, param2, param3, param4]
 
-    measure(None, namespace)  # Notice that we need to run measure at the very end again.
-    compare_out = namespace.measurement
-    assert all([i == j for i,j in zip(test_out, compare_out)])
+                        dct = sorted_dict(
+                            {p.label: {"unit": p.units, "value": value} for p, value in zip(params, values)})
+
+                        stdio.print(dct)
+
+        measure(None, namespace)  # Notice that we need to run measure at the very end again.
+
+        return str(stdio)
+
+    equivalence_test(test, compare)
 
 
 def test_after_start():
 
-    def measure(station, ns):
-        if not hasattr(ns, "measurements"):
-            ns.measurement = [hash(str(std_out))]
-        else:
-            ns.measurement.append(hash(str(std_out)))
+    def test(params, values, stdio, measure, namespace):
 
-        return {}
+        param1, param2, param3, param4 = params[:4]
+        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
 
-    std_out = StdIOMock()
-    namespace = pysweep.Namespace
-    param1 = make_parameter("label1", std_out)
-    param2 = make_parameter("label2", std_out)
-    param3 = make_parameter("label3", std_out)
-    param4 = make_parameter("label4", std_out)
+        for i in sweep_product(
+                sweep_object(param1, sweep_values1),
+                sweep_object(param2, sweep_values2),
+                sweep_object(param3, sweep_values3).after_start(measure).set_namespace(namespace),
+                sweep_object(param4, sweep_values4),
+        ):
+            stdio.print(sorted_dict(i))
 
-    sweep_values1 = [1, 2]
-    sweep_values2 = [1, 2, 3]
-    sweep_values3 = [0, 1, 2]
-    sweep_values4 = [0, 1]
+        return stdio
 
-    # Test that this ...
-    for i in sweep_product(
-            sweep_object(param1, sweep_values1),
-            sweep_object(param2, sweep_values2),
-            sweep_object(param3, sweep_values3).after_start(measure).set_namespace(namespace),
-            sweep_object(param4, sweep_values4),
-    ):
-        std_out.print(sorted_dict(i))
+    def compare(params, values, stdio, measure, namespace):
 
-    test_out = namespace.measurement
-    namespace = pysweep.Namespace  # A fresh namespace
-    std_out.flush()
+        param1, param2, param3, param4 = params[:4]
+        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
 
-    # Is equivalent to this
-    for value4 in sweep_values4:
-        param4.set(value4)
-        start = True
+        for value4 in sweep_values4:
+            param4.set(value4)
+            start = True
 
-        for value3 in sweep_values3:
-            param3.set(value3)
+            for value3 in sweep_values3:
+                param3.set(value3)
 
-            if start:
-                measure(None, namespace)
-                start = False
+                if start:
+                    measure(None, namespace)
+                    start = False
 
-            for value2 in sweep_values2:
-                param2.set(value2)
+                for value2 in sweep_values2:
+                    param2.set(value2)
 
-                for value1 in sweep_values1:
-                    param1.set(value1)
+                    for value1 in sweep_values1:
+                        param1.set(value1)
 
-                    values = [value1, value2, value3, value4]
-                    params = [param1, param2, param3, param4]
+                        values = [value1, value2, value3, value4]
+                        params = [param1, param2, param3, param4]
 
-                    dct = sorted_dict({p.label: {"unit": p.units, "value": value} for p, value in zip(params, values)})
-                    std_out.print(dct)
+                        dct = sorted_dict({p.label: {"unit": p.units, "value": value} for p, value in zip(params, values)})
+                        stdio.print(dct)
 
-    compare_out = namespace.measurement
-    assert all([i == j for i,j in zip(test_out, compare_out)])
+        return stdio
+
+    equivalence_test(test, compare)
 
 
 def test_zip():
 
-    std_out = StdIOMock()
-    param1 = make_parameter("label1", std_out)
-    param2 = make_parameter("label2", std_out)
-    param3 = make_parameter("label3", std_out)
-    param4 = make_parameter("label4", std_out)
+    def test(params, values, stdio, measure, namespace):
 
-    sweep_values1 = [1, 2]
-    sweep_values2 = [1, 2, 3]
-    sweep_values3 = [0, 1, 2]
-    sweep_values4 = range(10)
+        param1, param2, param3, param4 = params[:4]
+        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
 
-    # Test that this ...
-    for i in sweep_zip(
-        sweep_object(param1, sweep_values1),
-        sweep_object(param2, sweep_values2),
-        sweep_object(param3, sweep_values3),
-        sweep_object(param4, sweep_values4),
-    ):
-        std_out.print(sorted_dict(i))
-
-    test_out = str(std_out)
-    std_out.flush()
-
-    # Is equivalent to this
-    for value1, value2, value3, value4 in zip(sweep_values1, sweep_values2, sweep_values3, sweep_values4):
-        param1.set(value1)
-        param2.set(value2)
-        param3.set(value3)
-        param4.set(value4)
-
-        values = [value1, value2, value3, value4]
-        params = [param1, param2, param3, param4]
-
-        dct = sorted_dict({p.label: {"unit": p.units, "value": value} for p, value in zip(params, values)})
-        std_out.print(dct)
-
-    compare_out = str(std_out)
-    assert test_out == compare_out
-
-
-def test_product_zip():
-
-    std_out = StdIOMock()
-    param1 = make_parameter("label1", std_out)
-    param2 = make_parameter("label2", std_out)
-    param3 = make_parameter("label3", std_out)
-    param4 = make_parameter("label4", std_out)
-
-    sweep_values1 = [1, 2, 3]
-    sweep_values2 = [4, 5, 6]
-    sweep_values3 = [8, 1, 3]
-    sweep_values4 = [10, 12, 0]
-
-    # Test that this ...
-    for i in sweep_product(
-        sweep_zip(
+        for i in sweep_zip(
             sweep_object(param1, sweep_values1),
-            sweep_object(param2, sweep_values2)
-        ),
-        sweep_zip(
+            sweep_object(param2, sweep_values2),
             sweep_object(param3, sweep_values3),
-            sweep_object(param4, sweep_values4)
-        )
-    ):
-        std_out.print(sorted_dict(i))
+            sweep_object(param4, sweep_values4),
+        ):
+            stdio.print(sorted_dict(i))
 
-    test_out = str(std_out)
-    std_out.flush()
+        return stdio
 
-    # Is equivalent to this
-    for value3, value4 in zip(sweep_values3, sweep_values4):
-        param3.set(value3)
-        param4.set(value4)
-        for value1, value2 in zip(sweep_values1, sweep_values2):
+    def compare(params, values, stdio, measure, namespace):
+
+        param1, param2, param3, param4 = params[:4]
+        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
+
+        for value1, value2, value3, value4 in zip(sweep_values1, sweep_values2, sweep_values3, sweep_values4):
             param1.set(value1)
             param2.set(value2)
+            param3.set(value3)
+            param4.set(value4)
 
             values = [value1, value2, value3, value4]
             params = [param1, param2, param3, param4]
 
             dct = sorted_dict({p.label: {"unit": p.units, "value": value} for p, value in zip(params, values)})
-            std_out.print(dct)
+            stdio.print(dct)
 
-    compare_out = str(std_out)
-    assert test_out == compare_out
+        return stdio
+
+    equivalence_test(test, compare)
+
+
+def test_product_zip():
+
+    def test(params, values, stdio, measure, namespace):
+
+        param1, param2, param3, param4 = params[:4]
+        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
+
+        # Test that this ...
+        for i in sweep_product(
+            sweep_zip(
+                sweep_object(param1, sweep_values1),
+                sweep_object(param2, sweep_values2)
+            ),
+            sweep_zip(
+                sweep_object(param3, sweep_values3),
+                sweep_object(param4, sweep_values4)
+            )
+        ):
+            stdio.print(sorted_dict(i))
+
+        return stdio
+
+    def compare(params, values, stdio, measure, namespace):
+
+        param1, param2, param3, param4 = params[:4]
+        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
+
+        # Is equivalent to this
+        for value3, value4 in zip(sweep_values3, sweep_values4):
+            param3.set(value3)
+            param4.set(value4)
+            for value1, value2 in zip(sweep_values1, sweep_values2):
+                param1.set(value1)
+                param2.set(value2)
+
+                values = [value1, value2, value3, value4]
+                params = [param1, param2, param3, param4]
+
+                dct = sorted_dict({p.label: {"unit": p.units, "value": value} for p, value in zip(params, values)})
+                stdio.print(dct)
+
+        return stdio
+
+    equivalence_test(test, compare)
 
 
 def test_zip_product():
 
-    std_out = StdIOMock()
-    param1 = make_parameter("label1", std_out)
-    param2 = make_parameter("label2", std_out)
-    param3 = make_parameter("label3", std_out)
-    param4 = make_parameter("label4", std_out)
+    def test(params, values, stdio, measure, namespace):
 
-    sweep_values1 = [1, 2, 3]
-    sweep_values2 = [4, 5, 6]
-    sweep_values3 = [8, 1, 3]
-    sweep_values4 = [10, 12, 0]
+        param1, param2, param3, param4 = params[:4]
+        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
 
-    # Test that this ...
-    for i in sweep_zip(
-        sweep_product(
-            sweep_object(param1, sweep_values1),
-            sweep_object(param2, sweep_values2)
-        ),
-        sweep_product(
-            sweep_object(param3, sweep_values3),
-            sweep_object(param4, sweep_values4)
-        )
-    ):
-        std_out.print(sorted_dict(i))
+        for i in sweep_zip(
+            sweep_product(
+                sweep_object(param1, sweep_values1),
+                sweep_object(param2, sweep_values2)
+            ),
+            sweep_product(
+                sweep_object(param3, sweep_values3),
+                sweep_object(param4, sweep_values4)
+            )
+        ):
+            stdio.print(sorted_dict(i))
 
-    test_out = str(std_out)
-    std_out.flush()
+        return stdio
 
-    # Is equivalent to this
-    def gen1():
-        for value2 in sweep_values2:
-            param2.set(value2)
-            for value1 in sweep_values1:
-                param1.set(value1)
+    def compare(params, values, stdio, measure, namespace):
 
-                values = [value1, value2]
-                params = [param1, param2]
-                yield sorted_dict({p.label: {"unit": p.units, "value": value} for p, value in zip(params, values)})
+        param1, param2, param3, param4 = params[:4]
+        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
 
-    def gen2():
-        for value4 in sweep_values4:
-            param4.set(value4)
-            for value3 in sweep_values3:
-                param3.set(value3)
+        def gen1():
+            for value2 in sweep_values2:
+                param2.set(value2)
+                for value1 in sweep_values1:
+                    param1.set(value1)
 
-                values = [value3, value4]
-                params = [param3, param4]
-                yield sorted_dict({p.label: {"unit": p.units, "value": value} for p, value in zip(params, values)})
+                    values = [value1, value2]
+                    params = [param1, param2]
+                    yield sorted_dict({p.label: {"unit": p.units, "value": value} for p, value in zip(params, values)})
 
-    for d1, d2 in zip(gen1(), gen2()):
-        dct = {}
-        dct.update(d1)
-        dct.update(d2)
-        std_out.print(sorted_dict(dct))
+        def gen2():
+            for value4 in sweep_values4:
+                param4.set(value4)
+                for value3 in sweep_values3:
+                    param3.set(value3)
 
-    compare_out = str(std_out)
-    assert test_out == compare_out
+                    values = [value3, value4]
+                    params = [param3, param4]
+                    yield sorted_dict({p.label: {"unit": p.units, "value": value} for p, value in zip(params, values)})
+
+        for d1, d2 in zip(gen1(), gen2()):
+            dct = {}
+            dct.update(d1)
+            dct.update(d2)
+            stdio.print(sorted_dict(dct))
+
+        return stdio
+
+    equivalence_test(test, compare)
 
 
 def test_alias():
 
-    BaseSweepObject.add_alias("sleep", lambda so, t: so.after_each(pysweep.utils.pysleep(t)))
+    def log_time():
+        tb = time.time()
 
-    std_out = StdIOMock()
-    param1 = make_parameter("label1", std_out)
-    sweep_values1 = [1, 2, 3]
+        def inner(station, namespace):
+            return {"time": {"unit": "s", "value": "{:.2}".format(time.time() - tb)}}
+        return inner
 
-    tb = time.time()
-    for i in sweep_object(param1, sweep_values1).sleep(4):
-        tm = time.time() - tb
-        print("{:.2}".format(tm))
+    BaseSweepObject.add_alias("log_time", lambda so: so.after_each(log_time()))
+    BaseSweepObject.add_alias("sleep", lambda so, t: so.after_each(pysweep.utils.sleep(t)))
+
+    def test(params, values, stdio, measure, namespace):
+        param1 = params[0]
+        sweep_values1 = values[0]
+
+        for i in sweep_object(param1, sweep_values1).sleep(1).log_time():
+            stdio.print(i)
+
+        return stdio
+
+    def compare(params, values, stdio, measure, namespace):
+        param1 = params[0]
+        sweep_values1 = values[0]
+
+        time_logger = log_time()
+        for value in sweep_values1:
+            param1.set(value)
+            time.sleep(1)
+            d = {param1.label: {"unit": param1.units, "value": value}}
+            d.update(time_logger(None, None))
+            stdio.print(d)
+
+        return stdio
+
+    equivalence_test(test, compare)
+

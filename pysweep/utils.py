@@ -1,7 +1,7 @@
 import time
 
 
-def pysleep(t):
+def sleep(t):
     def inner(station, namespace):
         time.sleep(t)
         return {}
