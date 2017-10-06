@@ -8,7 +8,7 @@ class StdIOMock:
     def __init__(self):
         self._buffer = ""
 
-    def print(self, value):
+    def write(self, value):
         self._buffer += "\n" + str(value)
 
     def __repr__(self):
@@ -59,7 +59,7 @@ class ParameterFactory(BaseObjectFactory):
 
     def _args_function(self):
         def setter(v):
-            self._std_out.print("setting {} to {}".format(label, v))
+            self._std_out.write("setting {} to {}".format(label, v))
 
         label = "parameter {}".format(self._counter)
         self._counter += 1
