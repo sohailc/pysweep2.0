@@ -110,7 +110,7 @@ class SweepFunction(BaseSweepObject):
 
 class SweepProduct(BaseSweepObject):
     def __init__(self, sweep_objects):
-        self._sweep_object = sweep_objects
+        self._sweep_objects = sweep_objects
         super().__init__()
 
     @staticmethod
@@ -124,11 +124,21 @@ class SweepProduct(BaseSweepObject):
         return SweepGenerator(inner)
 
     def _setter_factory(self):
-        prod = self._sweep_object[0]
-        for so in self._sweep_object[1:]:
+        prod = self._sweep_objects[0]
+        for so in self._sweep_objects[1:]:
             prod = SweepProduct._two_product(prod, so)
 
         return prod
+
+    def __iter__(self):
+        namespace = self._namespace
+        station = self._station
+        for so in self._sweep_objects:
+            if namespace is not None:
+                so.set_namespace(namespace)
+            if station is not None:
+                so.set_station(station)
+        return super().__iter__()
 
 
 class SweepZip(BaseSweepObject):
@@ -146,6 +156,16 @@ class SweepZip(BaseSweepObject):
     def _setter_factory(self):
         for results in zip(*self._sweep_objects):
             yield SweepZip._combine_dictionaries(results)
+
+    def __iter__(self):
+        namespace = self._namespace
+        station = self._station
+        for so in self._sweep_objects:
+            if namespace is not None:
+                so.set_namespace(namespace)
+            if station is not None:
+                so.set_station(station)
+        return super().__iter__()
 
 # --------------  Sweep Factories ----------------------------------------------------------------------------
 

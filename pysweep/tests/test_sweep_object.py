@@ -467,6 +467,54 @@ def test_top_level_after_end():
     equivalence_test(test, compare)
 
 
+def test_set_namespace_top_level():
+
+    def test(params, values, stdio, measure, namespace):
+
+        param1, param2, param3, param4 = params[:4]
+        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
+
+        for i in sweep_product(
+                sweep_object(param1, sweep_values1),
+                sweep_object(param2, sweep_values2),
+                sweep_object(param3, sweep_values3).after_each(measure),
+                sweep_object(param4, sweep_values4),
+        ).set_namespace(namespace):
+
+            stdio.write(sorted_dict(i))
+
+        return str(stdio)
+
+    def compare(params, values, stdio, measure, namespace):
+
+        param1, param2, param3, param4 = params[:4]
+        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
+
+        for value4 in sweep_values4:
+            param4.set(value4)
+            for value3 in sweep_values3:
+
+                param3.set(value3)
+                measure_dict = measure(None, namespace)
+
+                for value2 in sweep_values2:
+                    param2.set(value2)
+                    for value1 in sweep_values1:
+                        param1.set(value1)
+
+                        values = [value1, value2, value3, value4]
+                        params = [param1, param2, param3, param4]
+
+                        dct = sorted_dict({p.label: {"unit": p.units, "value": value}
+                                           for p, value in zip(params, values)})
+                        dct.update(measure_dict)
+                        stdio.write(dct)
+
+        return str(stdio)
+
+    equivalence_test(test, compare)
+
+
 def test_alias():
 
     def log_time():
@@ -483,7 +531,7 @@ def test_alias():
         param1 = params[0]
         sweep_values1 = values[0]
 
-        for i in sweep_object(param1, sweep_values1).sleep(1).log_time():
+        for i in sweep_object(param1, sweep_values1).sleep(.1).log_time():
             stdio.write(i)
 
         return stdio
@@ -495,7 +543,7 @@ def test_alias():
         time_logger = log_time()
         for value in sweep_values1:
             param1.set(value)
-            time.sleep(1)
+            time.sleep(.1)
             d = {param1.label: {"unit": param1.units, "value": value}}
             d.update(time_logger(None, None))
             stdio.write(d)
