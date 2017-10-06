@@ -62,6 +62,7 @@ class ParameterFactory(BaseObjectFactory):
             self._std_out.print("setting {} to {}".format(label, v))
 
         label = "parameter {}".format(self._counter)
+        self._counter += 1
         return (), {"name": label, "set_cmd": setter, "units": "V"}
 
 

@@ -140,6 +140,38 @@ def test_after_each():
     equivalence_test(test, compare)
 
 
+def test_before_each():
+    """
+    Some measurements are less trivial to implement with pysweep, including performing a measurement right before
+    setting a parameter
+    """
+
+    # Test that this ...
+    def test(params, values, stdio, measure, namespace):
+
+        def wrapped(station, nspace, value):
+            measure(None, nspace)
+            params[0].set(value)
+            return {params[0].label: {"unit": params[0].units, "value": value}}
+
+        for i in sweep_object(wrapped, values[0]).set_namespace(namespace):
+            stdio.print(sorted_dict(i))
+
+        return str(stdio)
+
+    # Is equivalent to this
+    def compare(params, values, stdio, measure, namespace):
+        for value in values[0]:
+            measure(None, namespace)
+            params[0].set(value)
+            dct = sorted_dict({params[0].label: {"unit": params[0].units, "value": value}})
+            stdio.print(dct)
+
+        return str(stdio)
+
+    equivalence_test(test, compare)
+
+
 def test_after_end():
 
     def test(params, values, stdio, measure, namespace):
@@ -377,6 +409,58 @@ def test_zip_product():
             dct.update(d1)
             dct.update(d2)
             stdio.print(sorted_dict(dct))
+
+        return stdio
+
+    equivalence_test(test, compare)
+
+
+def test_top_level_after_end():
+
+    def test(params, values, stdio, measure, namespace):
+
+        param1, param2, param3, param4 = params[:4]
+        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
+
+        # Test that this ...
+        for i in sweep_product(
+            sweep_zip(
+                sweep_object(param1, sweep_values1),
+                sweep_object(param2, sweep_values2)
+            ).after_end(measure).set_namespace(namespace),
+            sweep_zip(
+                sweep_object(param3, sweep_values3),
+                sweep_object(param4, sweep_values4)
+            )
+        ):
+            stdio.print(sorted_dict(i))
+
+        return stdio
+
+    def compare(params, values, stdio, measure, namespace):
+
+        param1, param2, param3, param4 = params[:4]
+        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
+
+        # Is equivalent to this
+        for count, (value3, value4) in enumerate(zip(sweep_values3, sweep_values4)):
+            param3.set(value3)
+            param4.set(value4)
+
+            if count > 0:
+                measure(None, namespace)
+
+            for value1, value2 in zip(sweep_values1, sweep_values2):
+                param1.set(value1)
+                param2.set(value2)
+
+                values = [value1, value2, value3, value4]
+                params = [param1, param2, param3, param4]
+
+                dct = sorted_dict({p.label: {"unit": p.units, "value": value} for p, value in zip(params, values)})
+                stdio.print(dct)
+
+        measure(None, namespace)
 
         return stdio
 
