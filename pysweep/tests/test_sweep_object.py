@@ -16,7 +16,7 @@ def equivalence_test(test_function, compare_function):
         else:
             namespace.measurement.append(hs)
 
-        stdio_mock.print("measurement returns {}".format(hs))
+        stdio_mock.write("measurement returns {}".format(hs))
         return {"some measurement": hs}
 
     stdio_mock = StdIOMock()
@@ -34,7 +34,7 @@ def test_sanity():
     # Test that this ...
     def test(params, values, stdio, measure, namespace):
         for i in sweep_object(params[0], values[0]):
-            stdio.print(sorted_dict(i))
+            stdio.write(sorted_dict(i))
 
         return str(stdio)
 
@@ -43,7 +43,7 @@ def test_sanity():
         for value in values[0]:
             params[0].set(value)
             dct = sorted_dict({params[0].label: {"unit": params[0].units, "value": value}})
-            stdio.print(dct)
+            stdio.write(dct)
 
         return str(stdio)
 
@@ -63,7 +63,7 @@ def test_product():
             sweep_object(param3, sweep_values3),
             sweep_object(param4, sweep_values4),
         ):
-            stdio.print(sorted_dict(i))
+            stdio.write(sorted_dict(i))
 
         return str(stdio)
 
@@ -86,7 +86,7 @@ def test_product():
 
                         dct = sorted_dict(
                             {p.label: {"unit": p.units, "value": value} for p, value in zip(params, values)})
-                        stdio.print(dct)
+                        stdio.write(dct)
 
         return str(stdio)
 
@@ -106,7 +106,7 @@ def test_after_each():
                 sweep_object(param3, sweep_values3).after_each(measure).set_namespace(namespace),
                 sweep_object(param4, sweep_values4),
         ):
-            stdio.print(sorted_dict(i))
+            stdio.write(sorted_dict(i))
 
         return str(stdio)
 
@@ -133,7 +133,7 @@ def test_after_each():
                         dct = sorted_dict({p.label: {"unit": p.units, "value": value}
                                            for p, value in zip(params, values)})
                         dct.update(measure_dict)
-                        stdio.print(dct)
+                        stdio.write(dct)
 
         return str(stdio)
 
@@ -155,7 +155,7 @@ def test_before_each():
             return {params[0].label: {"unit": params[0].units, "value": value}}
 
         for i in sweep_object(wrapped, values[0]).set_namespace(namespace):
-            stdio.print(sorted_dict(i))
+            stdio.write(sorted_dict(i))
 
         return str(stdio)
 
@@ -165,7 +165,7 @@ def test_before_each():
             measure(None, namespace)
             params[0].set(value)
             dct = sorted_dict({params[0].label: {"unit": params[0].units, "value": value}})
-            stdio.print(dct)
+            stdio.write(dct)
 
         return str(stdio)
 
@@ -185,7 +185,7 @@ def test_after_end():
                 sweep_object(param3, sweep_values3).after_end(measure).set_namespace(namespace),
                 sweep_object(param4, sweep_values4),
         ):
-            stdio.print(sorted_dict(i))
+            stdio.write(sorted_dict(i))
 
         return str(stdio)
 
@@ -214,7 +214,7 @@ def test_after_end():
                         dct = sorted_dict(
                             {p.label: {"unit": p.units, "value": value} for p, value in zip(params, values)})
 
-                        stdio.print(dct)
+                        stdio.write(dct)
 
         measure(None, namespace)  # Notice that we need to run measure at the very end again.
 
@@ -236,7 +236,7 @@ def test_after_start():
                 sweep_object(param3, sweep_values3).after_start(measure).set_namespace(namespace),
                 sweep_object(param4, sweep_values4),
         ):
-            stdio.print(sorted_dict(i))
+            stdio.write(sorted_dict(i))
 
         return stdio
 
@@ -266,7 +266,7 @@ def test_after_start():
                         params = [param1, param2, param3, param4]
 
                         dct = sorted_dict({p.label: {"unit": p.units, "value": value} for p, value in zip(params, values)})
-                        stdio.print(dct)
+                        stdio.write(dct)
 
         return stdio
 
@@ -286,7 +286,7 @@ def test_zip():
             sweep_object(param3, sweep_values3),
             sweep_object(param4, sweep_values4),
         ):
-            stdio.print(sorted_dict(i))
+            stdio.write(sorted_dict(i))
 
         return stdio
 
@@ -305,7 +305,7 @@ def test_zip():
             params = [param1, param2, param3, param4]
 
             dct = sorted_dict({p.label: {"unit": p.units, "value": value} for p, value in zip(params, values)})
-            stdio.print(dct)
+            stdio.write(dct)
 
         return stdio
 
@@ -330,7 +330,7 @@ def test_product_zip():
                 sweep_object(param4, sweep_values4)
             )
         ):
-            stdio.print(sorted_dict(i))
+            stdio.write(sorted_dict(i))
 
         return stdio
 
@@ -351,7 +351,7 @@ def test_product_zip():
                 params = [param1, param2, param3, param4]
 
                 dct = sorted_dict({p.label: {"unit": p.units, "value": value} for p, value in zip(params, values)})
-                stdio.print(dct)
+                stdio.write(dct)
 
         return stdio
 
@@ -375,7 +375,7 @@ def test_zip_product():
                 sweep_object(param4, sweep_values4)
             )
         ):
-            stdio.print(sorted_dict(i))
+            stdio.write(sorted_dict(i))
 
         return stdio
 
@@ -408,7 +408,7 @@ def test_zip_product():
             dct = {}
             dct.update(d1)
             dct.update(d2)
-            stdio.print(sorted_dict(dct))
+            stdio.write(sorted_dict(dct))
 
         return stdio
 
@@ -433,7 +433,7 @@ def test_top_level_after_end():
                 sweep_object(param4, sweep_values4)
             )
         ):
-            stdio.print(sorted_dict(i))
+            stdio.write(sorted_dict(i))
 
         return stdio
 
@@ -458,7 +458,7 @@ def test_top_level_after_end():
                 params = [param1, param2, param3, param4]
 
                 dct = sorted_dict({p.label: {"unit": p.units, "value": value} for p, value in zip(params, values)})
-                stdio.print(dct)
+                stdio.write(dct)
 
         measure(None, namespace)
 
@@ -484,7 +484,7 @@ def test_alias():
         sweep_values1 = values[0]
 
         for i in sweep_object(param1, sweep_values1).sleep(1).log_time():
-            stdio.print(i)
+            stdio.write(i)
 
         return stdio
 
@@ -498,7 +498,7 @@ def test_alias():
             time.sleep(1)
             d = {param1.label: {"unit": param1.units, "value": value}}
             d.update(time_logger(None, None))
-            stdio.print(d)
+            stdio.write(d)
 
         return stdio
 
