@@ -1,5 +1,6 @@
 from pysweep import Namespace
 from pysweep.sweep_object import sweep_product
+from pysweep.utils import DictMerge
 
 
 class Measurement:
@@ -14,9 +15,10 @@ class Measurement:
         self._setup = setup
         self._cleanup = cleanup
         self._measures = measures
+        self._log_lines = []
 
-        if hasattr(sweep_objects, "__len__"):
-            self._sweep_object = sweep_product(sweep_objects)
+        if isinstance(sweep_objects, list):
+            self._sweep_object = sweep_product(*sweep_objects)
         else:
             self._sweep_object = sweep_objects
 
@@ -29,9 +31,19 @@ class Measurement:
         self._sweep_object.set_station(Measurement.station)
         self._sweep_object.set_namespace(namespace)
 
+        for measure in self._measures:
+            self._sweep_object.after_each(measure)
+
         self._setup(Measurement.station, namespace)
-        for iteration in self._sweep_object:
-            pass   # TODO: Left off here
+        for log_line in self._sweep_object:
+            self._log_lines.append(log_line)
 
         self._cleanup(Measurement.station, namespace)
-        self._sweep_object.unset_namespace()
+        self._sweep_object.set_namespace(None)
+
+        return self
+
+    def get_output(self):
+        return DictMerge(
+            {"unit": "replace", "value": "append"}
+        ).merge(self._log_lines)
