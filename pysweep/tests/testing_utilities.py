@@ -63,7 +63,7 @@ class ParameterFactory(BaseObjectFactory):
 
         label = "parameter {}".format(self._counter)
         self._counter += 1
-        return (), {"name": label, "set_cmd": setter, "units": "V"}
+        return (), {"name": label, "set_cmd": setter, "unit": "V"}
 
 
 class SweepValuesFactory(BaseObjectFactory):

@@ -1,5 +1,5 @@
 from pysweep import Namespace
-from pysweep.sweep_object import sweep_product
+from pysweep.sweep_object import nested_sweep
 
 
 class Measurement:
@@ -16,7 +16,7 @@ class Measurement:
         self._measures = measures
 
         if hasattr(sweep_objects, "__len__"):
-            self._sweep_object = sweep_product(sweep_objects)
+            self._sweep_object = nested_sweep(sweep_objects)
         else:
             self._sweep_object = sweep_objects
 

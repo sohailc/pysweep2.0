@@ -2,7 +2,7 @@ import time
 
 import pysweep
 import pysweep.utils
-from pysweep.sweep_object import sweep_object, sweep_product, sweep_zip, BaseSweepObject
+from pysweep.sweep_object import sweep, nested_sweep, zip_sweep, BaseSweepObject
 
 from .testing_utilities import sorted_dict, StdIOMock, ParameterFactory, SweepValuesFactory
 
@@ -33,7 +33,7 @@ def test_sanity():
 
     # Test that this ...
     def test(params, values, stdio, measure, namespace):
-        for i in sweep_object(params[0], values[0]):
+        for i in sweep(params[0], values[0]):
             stdio.write(sorted_dict(i))
 
         return str(stdio)
@@ -57,11 +57,11 @@ def test_product():
         param1, param2, param3, param4 = params[:4]
         sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
 
-        for i in sweep_product(
-            sweep_object(param1, sweep_values1),
-            sweep_object(param2, sweep_values2),
-            sweep_object(param3, sweep_values3),
-            sweep_object(param4, sweep_values4),
+        for i in nested_sweep(
+            sweep(param1, sweep_values1),
+            sweep(param2, sweep_values2),
+            sweep(param3, sweep_values3),
+            sweep(param4, sweep_values4),
         ):
             stdio.write(sorted_dict(i))
 
@@ -100,11 +100,11 @@ def test_after_each():
         param1, param2, param3, param4 = params[:4]
         sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
 
-        for i in sweep_product(
-                sweep_object(param1, sweep_values1),
-                sweep_object(param2, sweep_values2),
-                sweep_object(param3, sweep_values3).after_each(measure).set_namespace(namespace),
-                sweep_object(param4, sweep_values4),
+        for i in nested_sweep(
+                sweep(param1, sweep_values1),
+                sweep(param2, sweep_values2),
+                sweep(param3, sweep_values3).after_each(measure).set_namespace(namespace),
+                sweep(param4, sweep_values4),
         ):
             stdio.write(sorted_dict(i))
 
@@ -154,7 +154,7 @@ def test_before_each():
             params[0].set(value)
             return {params[0].label: {"unit": params[0].units, "value": value}}
 
-        for i in sweep_object(wrapped, values[0]).set_namespace(namespace):
+        for i in sweep(wrapped, values[0]).set_namespace(namespace):
             stdio.write(sorted_dict(i))
 
         return str(stdio)
@@ -179,11 +179,11 @@ def test_after_end():
         param1, param2, param3, param4 = params[:4]
         sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
 
-        for i in sweep_product(
-                sweep_object(param1, sweep_values1),
-                sweep_object(param2, sweep_values2),
-                sweep_object(param3, sweep_values3).after_end(measure).set_namespace(namespace),
-                sweep_object(param4, sweep_values4),
+        for i in nested_sweep(
+                sweep(param1, sweep_values1),
+                sweep(param2, sweep_values2),
+                sweep(param3, sweep_values3).after_end(measure).set_namespace(namespace),
+                sweep(param4, sweep_values4),
         ):
             stdio.write(sorted_dict(i))
 
@@ -230,11 +230,11 @@ def test_after_start():
         param1, param2, param3, param4 = params[:4]
         sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
 
-        for i in sweep_product(
-                sweep_object(param1, sweep_values1),
-                sweep_object(param2, sweep_values2),
-                sweep_object(param3, sweep_values3).after_start(measure).set_namespace(namespace),
-                sweep_object(param4, sweep_values4),
+        for i in nested_sweep(
+                sweep(param1, sweep_values1),
+                sweep(param2, sweep_values2),
+                sweep(param3, sweep_values3).after_start(measure).set_namespace(namespace),
+                sweep(param4, sweep_values4),
         ):
             stdio.write(sorted_dict(i))
 
@@ -280,11 +280,11 @@ def test_zip():
         param1, param2, param3, param4 = params[:4]
         sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
 
-        for i in sweep_zip(
-            sweep_object(param1, sweep_values1),
-            sweep_object(param2, sweep_values2),
-            sweep_object(param3, sweep_values3),
-            sweep_object(param4, sweep_values4),
+        for i in zip_sweep(
+            sweep(param1, sweep_values1),
+            sweep(param2, sweep_values2),
+            sweep(param3, sweep_values3),
+            sweep(param4, sweep_values4),
         ):
             stdio.write(sorted_dict(i))
 
@@ -320,14 +320,14 @@ def test_product_zip():
         sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
 
         # Test that this ...
-        for i in sweep_product(
-            sweep_zip(
-                sweep_object(param1, sweep_values1),
-                sweep_object(param2, sweep_values2)
+        for i in nested_sweep(
+            zip_sweep(
+                sweep(param1, sweep_values1),
+                sweep(param2, sweep_values2)
             ),
-            sweep_zip(
-                sweep_object(param3, sweep_values3),
-                sweep_object(param4, sweep_values4)
+            zip_sweep(
+                sweep(param3, sweep_values3),
+                sweep(param4, sweep_values4)
             )
         ):
             stdio.write(sorted_dict(i))
@@ -365,14 +365,14 @@ def test_zip_product():
         param1, param2, param3, param4 = params[:4]
         sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
 
-        for i in sweep_zip(
-            sweep_product(
-                sweep_object(param1, sweep_values1),
-                sweep_object(param2, sweep_values2)
+        for i in zip_sweep(
+            nested_sweep(
+                sweep(param1, sweep_values1),
+                sweep(param2, sweep_values2)
             ),
-            sweep_product(
-                sweep_object(param3, sweep_values3),
-                sweep_object(param4, sweep_values4)
+            nested_sweep(
+                sweep(param3, sweep_values3),
+                sweep(param4, sweep_values4)
             )
         ):
             stdio.write(sorted_dict(i))
@@ -423,14 +423,14 @@ def test_top_level_after_end():
         sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
 
         # Test that this ...
-        for i in sweep_product(
-            sweep_zip(
-                sweep_object(param1, sweep_values1),
-                sweep_object(param2, sweep_values2)
+        for i in nested_sweep(
+            zip_sweep(
+                sweep(param1, sweep_values1),
+                sweep(param2, sweep_values2)
             ).after_end(measure).set_namespace(namespace),
-            sweep_zip(
-                sweep_object(param3, sweep_values3),
-                sweep_object(param4, sweep_values4)
+            zip_sweep(
+                sweep(param3, sweep_values3),
+                sweep(param4, sweep_values4)
             )
         ):
             stdio.write(sorted_dict(i))
@@ -474,11 +474,11 @@ def test_set_namespace_top_level():
         param1, param2, param3, param4 = params[:4]
         sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
 
-        for i in sweep_product(
-                sweep_object(param1, sweep_values1),
-                sweep_object(param2, sweep_values2),
-                sweep_object(param3, sweep_values3).after_each(measure),
-                sweep_object(param4, sweep_values4),
+        for i in nested_sweep(
+                sweep(param1, sweep_values1),
+                sweep(param2, sweep_values2),
+                sweep(param3, sweep_values3).after_each(measure),
+                sweep(param4, sweep_values4),
         ).set_namespace(namespace):
 
             stdio.write(sorted_dict(i))
@@ -531,7 +531,7 @@ def test_alias():
         param1 = params[0]
         sweep_values1 = values[0]
 
-        for i in sweep_object(param1, sweep_values1).sleep(.1).log_time():
+        for i in sweep(param1, sweep_values1).sleep(.1).log_time():
             stdio.write(i)
 
         return stdio
