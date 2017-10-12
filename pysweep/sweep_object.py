@@ -68,7 +68,6 @@ class BaseSweepObject:
         -------
         iterable
         """
-
         start = True
         for main_msg in param_setter:
             after_msg = self._execute_measure_function("after_each")
@@ -219,7 +218,7 @@ class ParameterSweep(BaseSweepObject):
     def _setter_factory(self):
         for set_value in self._point_function(self._station, self._namespace):
             self._parameter.set(set_value)
-            yield {self._parameter.label: {"unit": self._parameter.units, "set_value": set_value}}
+            yield {self._parameter.label: {"unit": self._parameter.unit, "value": set_value}}
 
 
 class FunctionSweep(BaseSweepObject):
