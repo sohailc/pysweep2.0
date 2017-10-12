@@ -66,7 +66,7 @@ class BaseSweepObject:
 
         Returns
         -------
-        hooked: iterable
+        iterable
         """
 
         start = True
