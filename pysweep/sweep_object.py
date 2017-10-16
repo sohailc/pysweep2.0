@@ -1,4 +1,5 @@
 import qcodes
+import time
 
 
 class BaseSweepObject:
@@ -167,6 +168,26 @@ class SweepZip(BaseSweepObject):
                 so.set_station(station)
         return super().__iter__()
 
+
+class TimeTrace(BaseSweepObject):
+    def __init__(self, measure, delay, total_time):
+        self._measure = measure
+        self._delay = delay
+        self._total_time = total_time
+        super().__init__()
+
+    def _setter_factory(self):
+        t0 = time.time()
+        t = t0
+        while t - t0 < self._total_time:
+            msg = self._measure(self._station, self._namespace)
+            time_msg = {"time": {"unit": "s", "value": t}}
+            msg.update(time_msg)
+            yield msg
+            time.sleep(self._delay)
+            t = time.time()
+
+
 # --------------  Sweep Factories ----------------------------------------------------------------------------
 
 
@@ -192,3 +213,7 @@ def sweep_product(*sweep_objects):
 
 def sweep_zip(*sweep_objects):
     return SweepZip(sweep_objects)
+
+
+def time_trace(measure, delay, total_time):
+    return TimeTrace(measure, delay, total_time)
