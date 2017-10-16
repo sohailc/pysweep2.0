@@ -1,5 +1,5 @@
 from pysweep import Namespace
-from pysweep.sweep_object import sweep_product
+from pysweep.sweep_object import nested_sweep
 from pysweep.utils import DictMerge
 
 
@@ -18,7 +18,7 @@ class Measurement:
         self._log_lines = []
 
         if isinstance(sweep_objects, list):
-            self._sweep_object = sweep_product(*sweep_objects)
+            self._sweep_object = nested_sweep(*sweep_objects)
         else:
             self._sweep_object = sweep_objects
 

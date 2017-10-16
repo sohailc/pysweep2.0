@@ -3,6 +3,7 @@ A sweep object allows us to quickly express a measurement where we loop over ind
 perform measurements at different phases in the loop: either after the start of a loop, after at the end of it, or after
 each of the set points in the sweep.
 """
+import time
 import qcodes
 
 
@@ -377,6 +378,25 @@ class ZipSweep(BaseSweepObject):
         for so in self._sweep_objects:
             so.set_namespace(namespace)
         return self
+
+
+class TimeTrace(BaseSweepObject):
+    def __init__(self, measure, delay, total_time):
+        self._measure = measure
+        self._delay = delay
+        self._total_time = total_time
+        super().__init__()
+
+    def _setter_factory(self):
+        t0 = time.time()
+        t = t0
+        while t - t0 < self._total_time:
+            msg = self._measure(self._station, self._namespace)
+            time_msg = {"time": {"unit": "s", "value": t}}
+            msg.update(time_msg)
+            yield msg
+            time.sleep(self._delay)
+            t = time.time()
 
 # --------------  Sweep Factories ----------------------------------------------------------------------------
 
