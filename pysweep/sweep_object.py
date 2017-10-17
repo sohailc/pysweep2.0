@@ -381,6 +381,18 @@ class ZipSweep(BaseSweepObject):
 
 
 class TimeTrace(BaseSweepObject):
+    """
+    Make a "time sweep", that is, take a time trace
+
+    Parameter
+    ---------
+    measure: callable
+        callable of arguments  station, namespace, returning a dictionary with measurement results.
+    delay: float
+        The time in seconds between calling the measure function
+    total_time: float
+        The total duration of the time trace
+    """
     def __init__(self, measure, delay, total_time):
         self._measure = measure
         self._delay = delay
@@ -452,3 +464,7 @@ def zip_sweep(*sweep_objects):
     sweep_objects: list, BaseSweepObject
     """
     return ZipSweep(sweep_objects)
+
+
+def time_trace(measure, delay, total_time):
+    return TimeTrace(measure, delay, total_time)

@@ -10,17 +10,16 @@ class Measurement:
     def attach_station(cls, station):
         cls.station = station
 
-    def __init__(self, setup, cleanup, measures, sweep_objects):
+    default_output_formatter = DictMerge({"unit": "replace", "value": "append"})
+
+    def __init__(self, setup, cleanup, sweep_objects, measures=None, output_formatter=None):
 
         self._setup = setup
         self._cleanup = cleanup
-        self._measures = measures
-        self._log_lines = []
 
-        if isinstance(sweep_objects, list):
-            self._sweep_object = nested_sweep(*sweep_objects)
-        else:
-            self._sweep_object = sweep_objects
+        self._sweep_object = nested_sweep(*sweep_objects) if isinstance(sweep_objects, list) else sweep_objects
+        self._measures = [] if measures is None else measures
+        self._output_formatter = Measurement.default_output_formatter if output_formatter is None else output_formatter
 
         self.name = None
 
@@ -36,14 +35,10 @@ class Measurement:
 
         self._setup(Measurement.station, namespace)
         for log_line in self._sweep_object:
-            self._log_lines.append(log_line)
+            self._output_formatter.add(log_line)
 
         self._cleanup(Measurement.station, namespace)
         self._sweep_object.set_namespace(None)
 
         return self
 
-    def get_output(self):
-        return DictMerge(
-            {"unit": "replace", "value": "append"}
-        ).merge(self._log_lines)

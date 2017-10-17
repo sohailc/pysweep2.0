@@ -12,6 +12,7 @@ def sleep(t):
 class DictMerge:
     def __init__(self, strategy):
         self._strategy = DictMerge._add_default(strategy)
+        self.buffer = {}
 
     @staticmethod
     def _add_default(dictionary):
@@ -37,7 +38,7 @@ class DictMerge:
                 m = None
                 if strategy == "append":
                     m = self._make_list(v)
-                    m.append(result[k])
+                    m.extend(self._make_list(result[k]))
                 elif strategy == "replace":
                     m = v
                 elif strategy == "dict_merge":
@@ -52,3 +53,6 @@ class DictMerge:
         for d in dicts[1:]:
             result = self._merge_two(result, d)
         return result
+
+    def add(self, dictionary):
+        self.buffer = self.merge([dictionary, self.buffer])
