@@ -1,6 +1,6 @@
 from pysweep import Namespace
 from pysweep.sweep_object import nested_sweep
-from pysweep.utils import DictMerge
+from pysweep.output_formatter import DictFormatter
 
 
 class Measurement:
@@ -10,7 +10,9 @@ class Measurement:
     def attach_station(cls, station):
         cls.station = station
 
-    default_output_formatter = DictMerge({"unit": "replace", "value": "append"})
+    @classmethod
+    def get_default_formatter(cls):
+        return DictFormatter({"unit": "replace", "value": "append"})
 
     def __init__(self, setup, cleanup, sweep_objects, measures=None, output_formatter=None):
 
@@ -19,7 +21,7 @@ class Measurement:
 
         self._sweep_object = nested_sweep(*sweep_objects) if isinstance(sweep_objects, list) else sweep_objects
         self._measures = [] if measures is None else measures
-        self._output_formatter = Measurement.default_output_formatter if output_formatter is None else output_formatter
+        self._output_formatter = Measurement.get_default_formatter() if output_formatter is None else output_formatter
 
         self.name = None
 
@@ -37,8 +39,11 @@ class Measurement:
         for log_line in self._sweep_object:
             self._output_formatter.add(log_line)
 
+        self._output_formatter.finalize()
         self._cleanup(Measurement.station, namespace)
         self._sweep_object.set_namespace(None)
 
         return self
 
+    def output(self):
+        return self._output_formatter.output()
