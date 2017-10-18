@@ -1,5 +1,7 @@
 import os
 
+import qcodes
+import qcodes.data.location
 from pysweep.output_formatter import BaseFormatter
 
 
@@ -31,18 +33,14 @@ class _SpyviewMetaWriter:
 
         with open(self._output_meta_file_path, "w") as fh:
 
+            prop_funcs = [len, min, max]
+
             for count, p in enumerate(self._independent_params):
-
-                if count == 0:
-                    prop_funcs = [len, min, max]
-                else:
-                    prop_funcs = [len, max, min]  # I hate people to! BTW... this inconsistency is another excellent
-                    # reason to ditch this "spyview" crap ASAP
-
                 axis_values = self._axis_values[p]
                 props = [str(f(axis_values)) for f in prop_funcs]
                 props.append(p)
                 fh.write("\n".join(props) + "\n")
+                prop_funcs = [len, max, min]  # I hate people to!
 
             if len(self._independent_params) == 2:
                 props = ["1", "0", "1", "none"]
@@ -50,22 +48,34 @@ class _SpyviewMetaWriter:
 
 
 class SpyviewFormatter(BaseFormatter):
-    def __init__(self, independent_params, output_file_path, buffer_size=10):
 
-        if len(independent_params) not in [2, 3]:
-            raise ValueError("The number of independent parameters needs to be either 2 or 3 for the spyview formatter")
+    @staticmethod
+    def default_file_path():
+        io = qcodes.DiskIO('.')
+        home_path = os.path.expanduser("~")
+        data_path = os.path.join(home_path, "data", "{date}", "{date}_{counter}.dat")
+        loc_provider = qcodes.data.location.FormatLocation(fmt=data_path)
+        file_path = loc_provider(io)
 
-        self._independent_params = independent_params
+        dir_name, _ = os.path.split(file_path)
+        if not os.path.exists(dir_name):
+            os.makedirs(dir_name, exist_ok=True)
 
-        # This represents the parameter which sweeps fastest (that is the inner most sweep).
-        self._param_x = self._independent_params[0]
+        return file_path
 
-        self._start_value_param_x = None
-        self.output_file_path = output_file_path
+    def __init__(self, output_file_path=None, buffer_size=100):
+
+        self.output_file_path = output_file_path or SpyviewFormatter.default_file_path()
+        self._buffer_size = buffer_size
 
         self._buffer = []
-        self._buffer_size = buffer_size
-        self._meta_writer = _SpyviewMetaWriter(independent_params, output_file_path)
+        self._started = False
+
+        # The following attributes are determined once we begin adding dictionaries (the method "_begin" will be called)
+        self._independent_params = None
+        self._param_x = None  # This represents the parameter which sweeps fastest (that is the inner most sweep).
+        self._start_value_param_x = None
+        self._meta_writer = None
 
     def _write(self, string, force=False):
         self._buffer.append(string)
@@ -76,14 +86,24 @@ class SpyviewFormatter(BaseFormatter):
 
             self._buffer = []
 
+    def _begin(self, dictionary):
+
+        self._independent_params = [k for k in dictionary if "independent_parameter" in dictionary[k]]
+        self._param_x = self._independent_params[0]
+        self._start_value_param_x = dictionary[self._param_x]["value"]
+        self._meta_writer = _SpyviewMetaWriter(self._independent_params, self.output_file_path)
+
     def add(self, dictionary):
+
+        if not self._started:
+            self._begin(dictionary)
 
         value_param_x = dictionary[self._param_x]["value"]
 
-        if self._start_value_param_x is None:
-            self._start_value_param_x = value_param_x
-        elif self._start_value_param_x == value_param_x:
+        if self._start_value_param_x == value_param_x and self._started:
             self._write("\n")
+
+        self._started = True
 
         params = list(self._independent_params)
         params.extend([k for k in dictionary.keys() if k not in self._independent_params])

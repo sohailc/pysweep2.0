@@ -2,9 +2,11 @@ import time
 
 import pysweep
 import pysweep.utils
-from pysweep.sweep_object import sweep, nested_sweep, zip_sweep, BaseSweepObject
+from pysweep.sweep_object import sweep, nested_sweep, zip_sweep, BaseSweepObject, ParameterSweep
 
 from .testing_utilities import sorted_dict, StdIOMock, ParameterFactory, SweepValuesFactory
+
+param_log_format = ParameterSweep.log_format
 
 
 def equivalence_test(test_function, compare_function):
@@ -42,7 +44,7 @@ def test_sanity():
     def compare(params, values, stdio, measure, namespace):
         for value in values[0]:
             params[0].set(value)
-            dct = sorted_dict({params[0].label: {"unit": params[0].unit, "value": value}})
+            dct = sorted_dict(param_log_format(params[0], value))
             stdio.write(dct)
 
         return str(stdio)
@@ -84,8 +86,9 @@ def test_product():
                         values = [value1, value2, value3, value4]
                         params = [param1, param2, param3, param4]
 
-                        dct = sorted_dict(
-                            {p.label: {"unit": p.unit, "value": value} for p, value in zip(params, values)})
+                        dct = sorted_dict([
+                            param_log_format(p, value) for p, value in zip(params, values)])
+
                         stdio.write(dct)
 
         return str(stdio)
@@ -130,8 +133,9 @@ def test_after_each():
                         values = [value1, value2, value3, value4]
                         params = [param1, param2, param3, param4]
 
-                        dct = sorted_dict({p.label: {"unit": p.unit, "value": value}
-                                           for p, value in zip(params, values)})
+                        dct = sorted_dict([
+                            param_log_format(p, value) for p, value in zip(params, values)])
+
                         dct.update(measure_dict)
                         stdio.write(dct)
 
@@ -211,8 +215,8 @@ def test_after_end():
                         values = [value1, value2, value3, value4]
                         params = [param1, param2, param3, param4]
 
-                        dct = sorted_dict(
-                            {p.label: {"unit": p.unit, "value": value} for p, value in zip(params, values)})
+                        dct = sorted_dict([
+                            param_log_format(p, value) for p, value in zip(params, values)])
 
                         stdio.write(dct)
 
@@ -265,7 +269,8 @@ def test_after_start():
                         values = [value1, value2, value3, value4]
                         params = [param1, param2, param3, param4]
 
-                        dct = sorted_dict({p.label: {"unit": p.unit, "value": value} for p, value in zip(params, values)})
+                        dct = sorted_dict([
+                            param_log_format(p, value) for p, value in zip(params, values)])
                         stdio.write(dct)
 
         return stdio
@@ -304,7 +309,8 @@ def test_zip():
             values = [value1, value2, value3, value4]
             params = [param1, param2, param3, param4]
 
-            dct = sorted_dict({p.label: {"unit": p.unit, "value": value} for p, value in zip(params, values)})
+            dct = sorted_dict([
+                param_log_format(p, value) for p, value in zip(params, values)])
             stdio.write(dct)
 
         return stdio
@@ -350,7 +356,8 @@ def test_product_zip():
                 values = [value1, value2, value3, value4]
                 params = [param1, param2, param3, param4]
 
-                dct = sorted_dict({p.label: {"unit": p.unit, "value": value} for p, value in zip(params, values)})
+                dct = sorted_dict([
+                    param_log_format(p, value) for p, value in zip(params, values)])
                 stdio.write(dct)
 
         return stdio
@@ -392,7 +399,11 @@ def test_zip_product():
 
                     values = [value1, value2]
                     params = [param1, param2]
-                    yield sorted_dict({p.label: {"unit": p.unit, "value": value} for p, value in zip(params, values)})
+
+                    dct = sorted_dict([
+                        param_log_format(p, value) for p, value in zip(params, values)])
+
+                    yield dct
 
         def gen2():
             for value4 in sweep_values4:
@@ -402,7 +413,11 @@ def test_zip_product():
 
                     values = [value3, value4]
                     params = [param3, param4]
-                    yield sorted_dict({p.label: {"unit": p.unit, "value": value} for p, value in zip(params, values)})
+
+                    dct = sorted_dict([
+                        param_log_format(p, value) for p, value in zip(params, values)])
+
+                    yield dct
 
         for d1, d2 in zip(gen1(), gen2()):
             dct = {}
@@ -457,7 +472,9 @@ def test_top_level_after_end():
                 values = [value1, value2, value3, value4]
                 params = [param1, param2, param3, param4]
 
-                dct = sorted_dict({p.label: {"unit": p.unit, "value": value} for p, value in zip(params, values)})
+                dct = sorted_dict([
+                    param_log_format(p, value) for p, value in zip(params, values)])
+
                 stdio.write(dct)
 
         measure(None, namespace)
@@ -505,8 +522,9 @@ def test_set_namespace_top_level():
                         values = [value1, value2, value3, value4]
                         params = [param1, param2, param3, param4]
 
-                        dct = sorted_dict({p.label: {"unit": p.unit, "value": value}
-                                           for p, value in zip(params, values)})
+                        dct = sorted_dict([
+                            param_log_format(p, value) for p, value in zip(params, values)])
+
                         dct.update(measure_dict)
                         stdio.write(dct)
 
@@ -544,7 +562,7 @@ def test_alias():
         for value in sweep_values1:
             param1.set(value)
             time.sleep(.1)
-            d = {param1.label: {"unit": param1.unit, "value": value}}
+            d = param_log_format(param1, value)
             d.update(time_logger(None, None))
             stdio.write(d)
 

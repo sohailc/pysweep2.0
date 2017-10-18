@@ -75,5 +75,13 @@ class SweepValuesFactory(BaseObjectFactory):
         return (np.random.normal(0, 1.0, l),), {}
 
 
-def sorted_dict(dct):
-    return OrderedDict(sorted(dct.items(), key=lambda t: t[0]))
+def sorted_dict(dcts):
+
+    if not isinstance(dcts, list):
+        dcts = [dcts]
+
+    d = OrderedDict()
+    for dct in dcts:
+        d.update(OrderedDict(sorted(dct.items(), key=lambda t: t[0])))
+
+    return d

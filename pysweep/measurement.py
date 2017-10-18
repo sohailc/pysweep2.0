@@ -10,9 +10,9 @@ class Measurement:
     def attach_station(cls, station):
         cls.station = station
 
-    @classmethod
-    def get_default_formatter(cls):
-        return DictFormatter({"unit": "replace", "value": "append"})
+    @staticmethod
+    def get_default_formatter():
+        return DictFormatter({"unit": "replace", "value": "append", "independent_parameter": "replace"})
 
     def __init__(self, setup, cleanup, sweep_objects, measures=None, output_formatter=None):
 
@@ -25,7 +25,7 @@ class Measurement:
 
         self.name = None
 
-    def run(self, name, description=None):
+    def run(self, name):
 
         self.name = name
         namespace = Namespace()

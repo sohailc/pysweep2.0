@@ -4,6 +4,8 @@ perform measurements at different phases in the loop: either after the start of 
 each of the set points in the sweep.
 """
 import time
+from collections import OrderedDict
+
 import qcodes
 
 
@@ -211,6 +213,15 @@ class ParameterSweep(BaseSweepObject):
         A callable of two parameters: station, namespace, returning an iterator. Unrolling this iterator returns to
         us set values of the parameter
     """
+
+    @staticmethod
+    def log_format(parameter, set_value):
+        return OrderedDict({parameter.label: {
+            "unit": parameter.unit,
+            "value": set_value,
+            "independent_parameter": True
+        }})
+
     def __init__(self, parameter, point_function):
         self._parameter = parameter
         self._point_function = point_function
@@ -219,7 +230,7 @@ class ParameterSweep(BaseSweepObject):
     def _setter_factory(self):
         for set_value in self._point_function(self._station, self._namespace):
             self._parameter.set(set_value)
-            yield {self._parameter.label: {"unit": self._parameter.unit, "value": set_value}}
+            yield ParameterSweep.log_format(self._parameter, set_value)
 
 
 class FunctionSweep(BaseSweepObject):
@@ -404,7 +415,7 @@ class TimeTrace(BaseSweepObject):
         t = t0
         while t - t0 < self._total_time:
             msg = self._measure(self._station, self._namespace)
-            time_msg = {"time": {"unit": "s", "value": t}}
+            time_msg = {"time": {"unit": "s", "value": t, "independent_parameter": True}}
             msg.update(time_msg)
             yield msg
             time.sleep(self._delay)
