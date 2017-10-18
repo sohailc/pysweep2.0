@@ -10,7 +10,7 @@ def sleep(t):
 
 
 class DictMerge:
-    def __init__(self, strategy):
+    def __init__(self, **strategy):
         self._strategy = DictMerge._add_default(strategy)
 
     @staticmethod

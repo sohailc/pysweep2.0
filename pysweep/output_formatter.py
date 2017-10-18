@@ -13,8 +13,8 @@ class BaseFormatter:
 
 
 class DictFormatter(BaseFormatter, DictMerge):
-    def __init__(self, strategy):
-        super().__init__(strategy)
+    def __init__(self, **strategy):
+        super().__init__(**strategy)
         self.buffer = {}
 
     def add(self, dictionary):

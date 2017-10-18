@@ -1,6 +1,7 @@
 from pysweep import Namespace
 from pysweep.sweep_object import nested_sweep
 from pysweep.output_formatter import DictFormatter
+from pysweep.spyview import SpyviewFormatter
 
 
 class Measurement:
@@ -10,9 +11,15 @@ class Measurement:
     def attach_station(cls, station):
         cls.station = station
 
-    @staticmethod
-    def get_default_formatter():
-        return DictFormatter({"unit": "replace", "value": "append", "independent_parameter": "replace"})
+    @classmethod
+    def set_default_formatter(cls, formatter_class, args, kwargs):
+        cls.formatter_class = formatter_class
+        cls.formatter_args = args
+        cls.formatter_kwargs = kwargs
+
+    @classmethod
+    def get_default_formatter(cls):
+        return cls.formatter_class(*cls.formatter_args, **cls.formatter_kwargs)
 
     def __init__(self, setup, cleanup, sweep_objects, measures=None, output_formatter=None):
 
@@ -20,8 +27,8 @@ class Measurement:
         self._cleanup = cleanup
 
         self._sweep_object = nested_sweep(*sweep_objects) if isinstance(sweep_objects, list) else sweep_objects
-        self._measures = [] if measures is None else measures
-        self._output_formatter = Measurement.get_default_formatter() if output_formatter is None else output_formatter
+        self._measures = measures or []
+        self._output_formatter = output_formatter or Measurement.get_default_formatter()
 
         self.name = None
 
@@ -47,3 +54,23 @@ class Measurement:
 
     def output(self):
         return self._output_formatter.output()
+
+
+formatters = {
+    "spyview": {
+        "formatter_class": SpyviewFormatter,
+        "args": [],
+        "kwargs": dict()
+    },
+    "dict": {
+        "formatter_class": DictFormatter,
+        "args": [],
+        "kwargs": dict(unit="replace", value="append", independent_parameter="replace")
+    }
+}
+
+
+def set_default_formatter(cls="spyview"):
+    Measurement.set_default_formatter(**formatters[cls])
+
+set_default_formatter()
