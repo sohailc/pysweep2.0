@@ -44,6 +44,8 @@ class DictMerge:
                     m = self._merge_two(v, result[k])
 
                 result[k] = m
+            else:
+                result[k] = v
 
         return result
 

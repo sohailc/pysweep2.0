@@ -52,9 +52,7 @@ class BaseSweepObject:
         msg_all = dict()
         for func in self._measure_functions[name]:
             msg = func(self._station, self._namespace)
-
-            if name == "after_each":
-                msg_all.update(msg)
+            msg_all.update(msg)
 
         return msg_all
 
@@ -82,7 +80,7 @@ class BaseSweepObject:
 
             yield main_msg
 
-        self._execute_measure_function("after_end")
+        yield self._execute_measure_function("after_end")
 
     def _setter_factory(self):
         """
