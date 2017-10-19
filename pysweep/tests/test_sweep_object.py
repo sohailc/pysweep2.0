@@ -1,3 +1,4 @@
+import os
 import time
 
 import pysweep
@@ -221,6 +222,47 @@ def test_after_end():
                         stdio.write(dct)
 
         measure(None, namespace)  # Notice that we need to run measure at the very end again.
+
+        return str(stdio)
+
+    equivalence_test(test, compare)
+
+
+def test_after_end_msg():
+
+    def test(params, values, stdio, measure, namespace):
+
+        p1, p2 = params[:2]
+        values1, values2 = values[:2]
+        so1 = sweep(p1, values1)
+        so2 = sweep(p2, values2).after_end(measure).set_namespace(namespace)
+
+        so3 = nested_sweep(so2, so1)
+
+        for i in so3:
+            msg = so3.get_end_measurement_message()
+            if msg != dict():
+                stdio.write(msg)
+
+        stdio.write(so3.get_end_measurement_message())
+
+        return str(stdio)
+
+    def compare(params, values, stdio, measure, namespace):
+
+        p1, p2 = params[:2]
+        values1, values2 = values[:2]
+        so1 = sweep(p1, values1)
+        so2 = sweep(p2, values2).after_end(measure).set_namespace(namespace)
+
+        for i in so1:
+            msg = so2.get_end_measurement_message()
+            for j in so2:
+                if msg != dict():
+                    stdio.write(msg)
+                    msg = dict()
+
+        stdio.write(so2.get_end_measurement_message())
 
         return str(stdio)
 

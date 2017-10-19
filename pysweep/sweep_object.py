@@ -41,12 +41,25 @@ class BaseSweepObject:
         # independent parameter is set.
         self._station = None  # A QCoDeS station which allows us to access measurement instruments
         self._namespace = None  # The namespace allows different measurement functions to share a memory space
+        self._after_end_msg = dict()
 
         self._measure_functions = {
             "after_each": [],
             "after_start": [],
             "after_end": []
         }
+
+    def get_end_measurement_message(self):
+        """
+        This is an interface to access the results of the "after_end" measurement results.
+
+        Returns
+        -------
+        msg: dict
+        """
+        msg = dict(self._after_end_msg)
+        self._after_end_msg = dict()
+        return msg
 
     def _execute_measure_function(self, name):
         msg_all = dict()
@@ -70,9 +83,10 @@ class BaseSweepObject:
         iterable
         """
         start = True
+
         for main_msg in param_setter:
-            after_msg = self._execute_measure_function("after_each")
-            main_msg.update(after_msg)
+            after_each_msg = self._execute_measure_function("after_each")
+            main_msg.update(after_each_msg)
 
             if start:
                 self._execute_measure_function("after_start")
@@ -80,7 +94,9 @@ class BaseSweepObject:
 
             yield main_msg
 
-        yield self._execute_measure_function("after_end")
+        after_end_msg = self._execute_measure_function("after_end")
+        self._after_end_msg.update(after_end_msg)
+        return
 
     def _setter_factory(self):
         """
@@ -176,6 +192,69 @@ class BaseSweepObject:
             self._namespace = namespace
         return self
 
+
+class CompoundSweep(BaseSweepObject):
+    """
+    A compound sweep object is composed to multiple sweep objects. Examples are a nested sweep or a zipped sweep.
+    This is also an abstract class.
+
+    Parameters
+    ----------
+    sweep_objects: list, BaseSweepObject
+    """
+
+    def __init__(self, sweep_objects):
+        self._sweep_objects = sweep_objects
+        super().__init__()
+
+    def get_end_measurement_message(self):
+        """
+        Make sure the end measurement results of the sub sweep objects are accessible from the top level interface
+
+        Returns
+        -------
+        msgs: dict
+            A dictionary containing measurement results.
+        """
+        msgs = self._sweep_objects[0].get_end_measurement_message()
+        for so in self._sweep_objects[1:]:
+            msg = so.get_end_measurement_message()
+            msgs.update(msg)
+
+        return msgs
+
+    def set_station(self, station):
+        """
+        We need to pass on the station to the sweep objects in the sub sweep objects
+
+        Parameter
+        ---------
+        station: qcodes.Station
+        """
+        self._station = station
+        for so in self._sweep_objects:
+            so.set_station(station)
+        return self
+
+    def set_namespace(self, namespace):
+        """
+        We need to pass on the namespace to the sweep objects in the sub sweep objects
+
+        Parameter
+        ---------
+        namespace: pysweep.Namespace
+        """
+        self._namespace = namespace
+        for so in self._sweep_objects:
+            so.set_namespace(namespace)
+        return self
+
+    def _setter_factory(self):
+        """
+        When called, this method returns the param setter iterable appropriate for this measurement
+        """
+        raise NotImplementedError("Please subclass BaseSweepObject")
+
 # --------------Sweep Subclasses ----------------------------------------------------------------------------
 
 
@@ -255,15 +334,10 @@ class FunctionSweep(BaseSweepObject):
             yield self._set_function(self._station, self._namespace, set_value)
 
 
-class NestedSweep(BaseSweepObject):
+class NestedSweep(CompoundSweep):
     """
     Nest multiple sweep objects. This is for example very useful when performing two or higher dimensional scans
     (e.g. sweep two gate voltages and measure a current at each coordinate (gate1, gate2).
-
-    Parameters
-    ----------
-    sweep_objects: list, BaseSweepObject
-        The first sweep object in the list represents the inner most loop
 
     Notes
     -----
@@ -281,9 +355,6 @@ class NestedSweep(BaseSweepObject):
 
     Etc...
     """
-    def __init__(self, sweep_objects):
-        self._sweep_objects = sweep_objects
-        super().__init__()
 
     @staticmethod
     def _two_product(sweep_object1, sweep_object2):
@@ -301,6 +372,7 @@ class NestedSweep(BaseSweepObject):
             for result2 in sweep_object2:
                 for result1 in sweep_object1:
                     result1.update(result2)
+
                     yield result1
 
         return IteratorSweep(inner)
@@ -308,49 +380,15 @@ class NestedSweep(BaseSweepObject):
     def _setter_factory(self):
         prod = self._sweep_objects[0]
         for so in self._sweep_objects[1:]:
-            prod = NestedSweep._two_product(prod, so)
+            prod = self._two_product(prod, so)
 
         return prod
 
-    def set_station(self, station):
-        """
-        We need to pass on the station to the sweep objects in the nest
 
-        Parameter
-        ---------
-        station: qcodes.Station
-        """
-        self._station = station
-        for so in self._sweep_objects:
-            so.set_station(station)
-        return self
-
-    def set_namespace(self, namespace):
-        """
-        We need to pass on the namespace to the sweep objects in the nest
-
-        Parameter
-        ---------
-        namespace: pysweep.Namespace
-        """
-        self._namespace = namespace
-        for so in self._sweep_objects:
-            so.set_namespace(namespace)
-        return self
-
-
-class ZipSweep(BaseSweepObject):
+class ZipSweep(CompoundSweep):
     """
     Zip multiple sweep objects. Unlike a nested sweep, we will produce a 1D sweep
-
-    Parameters
-    ----------
-    sweep_objects: list, BaseSweepObject
     """
-    def __init__(self, sweep_objects):
-        self._sweep_objects = sweep_objects
-        super().__init__()
-
     @staticmethod
     def _combine_dictionaries(dictionaries):
         combined = {}
@@ -361,32 +399,6 @@ class ZipSweep(BaseSweepObject):
     def _setter_factory(self):
         for results in zip(*self._sweep_objects):
             yield ZipSweep._combine_dictionaries(results)
-
-    def set_station(self, station):
-        """
-        We need to pass on the station to the sweep objects in the nest
-
-        Parameter
-        ---------
-        station: qcodes.Station
-        """
-        self._station = station
-        for so in self._sweep_objects:
-            so.set_station(station)
-        return self
-
-    def set_namespace(self, namespace):
-        """
-        We need to pass on the namespace to the sweep objects in the nest
-
-        Parameter
-        ---------
-        namespace: pysweep.Namespace
-        """
-        self._namespace = namespace
-        for so in self._sweep_objects:
-            so.set_namespace(namespace)
-        return self
 
 
 class TimeTrace(BaseSweepObject):
