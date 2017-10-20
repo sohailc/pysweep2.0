@@ -216,8 +216,10 @@ class CompoundSweep(BaseSweepObject):
         msgs: dict
             A dictionary containing measurement results.
         """
-        msgs = self._sweep_objects[0].get_end_measurement_message()
-        for so in self._sweep_objects[1:]:
+        msgs = dict(self._after_end_msg)
+        self._after_end_msg = dict()
+
+        for so in self._sweep_objects:
             msg = so.get_end_measurement_message()
             msgs.update(msg)
 

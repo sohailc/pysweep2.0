@@ -269,6 +269,42 @@ def test_after_end_msg():
     equivalence_test(test, compare)
 
 
+def test_after_end_msg_top_level():
+
+    def test(params, values, stdio, measure, namespace):
+
+        p1, p2 = params[:2]
+        values1, values2 = values[:2]
+        so1 = sweep(p1, values1)
+        so2 = sweep(p2, values2)
+
+        so3 = nested_sweep(so2, so1).after_end(measure).set_namespace(namespace)
+
+        for i in so3:
+           pass
+
+        stdio.write(so3.get_end_measurement_message())
+
+        return str(stdio)
+
+    def compare(params, values, stdio, measure, namespace):
+
+        p1, p2 = params[:2]
+        values1, values2 = values[:2]
+        so1 = sweep(p1, values1).after_end(measure).set_namespace(namespace)
+        so2 = sweep(p2, values2)
+
+        for i in so1:
+            for j in so2:
+                pass
+
+        stdio.write(so1.get_end_measurement_message())
+
+        return str(stdio)
+
+    equivalence_test(test, compare)
+
+
 def test_after_start():
 
     def test(params, values, stdio, measure, namespace):
