@@ -45,8 +45,9 @@ class BaseSweepObject:
         self._station = None  # A QCoDeS station which allows us to access measurement instruments
         self._namespace = None  # The namespace allows different measurement functions to share a memory space
         self._after_end_msg = dict()
-        self.is_compound = isinstance(self, CompoundSweep)  # If we are a compound sweep object, the behavior of how
-        # we deal with messages from the "after_end" measurement function is a little different.
+        self.is_top_level = True  # Note that "top_level" is NOT the same as the outer most sweep object in a nested
+        # sweep. When we create a compound sweep object (e.g. a nest or a zip), this compound object becomes the top
+        # level object.
 
         self._measure_functions = {
             "after_each": [],
@@ -97,7 +98,7 @@ class BaseSweepObject:
                 self._execute_measure_function("after_start")
                 start = False
 
-            if self.is_compound:
+            if self.is_top_level:
                 after_end_msg = self._get_end_measurement_message()
                 main_msg.update(after_end_msg)
 
@@ -105,7 +106,11 @@ class BaseSweepObject:
 
         self._after_end_msg.update(self._execute_measure_function("after_end"))
 
-        if self.is_compound:
+        # In principle we want the result of the after_end measurement to be yielded at the end. However,
+        # we only want to do this if we are at the top level. If this behavior would be displayed in one of the sub
+        # sweep object in e.g. a nest, the lower lying nest objects would multiply over this yield, with disastrous
+        # consequences.
+        if self.is_top_level:
             after_end_msg = self._get_end_measurement_message()
             if after_end_msg != OrderedDict():
                 yield after_end_msg
@@ -216,6 +221,9 @@ class CompoundSweep(BaseSweepObject):
     """
 
     def __init__(self, sweep_objects):
+        for so in sweep_objects:
+            so.is_top_level = False
+
         self._sweep_objects = sweep_objects
         super().__init__()
 
