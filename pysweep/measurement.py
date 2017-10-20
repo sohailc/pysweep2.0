@@ -44,13 +44,7 @@ class Measurement:
 
         self._setup(Measurement.station, namespace)
         for log_line in self._sweep_object:
-            after_end_msg = self._sweep_object.get_end_measurement_message()
-            log_line.update(after_end_msg)
             self._output_formatter.add(log_line)
-
-        after_end_msg = self._sweep_object.get_end_measurement_message()
-        if after_end_msg != dict():
-            self._output_formatter.add(after_end_msg)
 
         self._output_formatter.finalize()
         self._cleanup(Measurement.station, namespace)

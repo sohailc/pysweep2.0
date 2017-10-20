@@ -14,8 +14,11 @@ class BaseSweepObject:
     A sweep object is defined as follows:
     1) It is iterable and looping over a sweep object shall result in independent measurement parameters being set
     at each iteration
-    2) At each iteration a dictionary is returned containing information about the parameters that have been set
-    and the result of the measurement performed at each set point
+    2) At each iteration a dictionary is returned containing information about the parameters set and measurements that
+    have been performed. Note that in general, the number of iterations is equal to the number of set points, except
+    for the case where the "after_end" measurement function returns a non-empty dictionary. In the latter case, the
+    number of iterations is equal to the number of set points, plus one. The last iteration returns the result of the
+    after_end measurement.
     3) A sweep object implements the following methods at minimum:
 
        * after_each
@@ -42,6 +45,8 @@ class BaseSweepObject:
         self._station = None  # A QCoDeS station which allows us to access measurement instruments
         self._namespace = None  # The namespace allows different measurement functions to share a memory space
         self._after_end_msg = dict()
+        self.is_compound = isinstance(self, CompoundSweep)  # If we are a compound sweep object, the behavior of how
+        # we deal with messages from the "after_end" measurement function is a little different.
 
         self._measure_functions = {
             "after_each": [],
@@ -49,7 +54,7 @@ class BaseSweepObject:
             "after_end": []
         }
 
-    def get_end_measurement_message(self):
+    def _get_end_measurement_message(self):
         """
         This is an interface to access the results of the "after_end" measurement results.
 
@@ -57,8 +62,8 @@ class BaseSweepObject:
         -------
         msg: dict
         """
-        msg = dict(self._after_end_msg)
-        self._after_end_msg = dict()
+        msg = OrderedDict(self._after_end_msg)
+        self._after_end_msg = OrderedDict()
         return msg
 
     def _execute_measure_function(self, name):
@@ -92,11 +97,18 @@ class BaseSweepObject:
                 self._execute_measure_function("after_start")
                 start = False
 
+            if self.is_compound:
+                after_end_msg = self._get_end_measurement_message()
+                main_msg.update(after_end_msg)
+
             yield main_msg
 
-        after_end_msg = self._execute_measure_function("after_end")
-        self._after_end_msg.update(after_end_msg)
-        return
+        self._after_end_msg.update(self._execute_measure_function("after_end"))
+
+        if self.is_compound:
+            after_end_msg = self._get_end_measurement_message()
+            if after_end_msg != OrderedDict():
+                yield after_end_msg
 
     def _setter_factory(self):
         """
@@ -207,7 +219,7 @@ class CompoundSweep(BaseSweepObject):
         self._sweep_objects = sweep_objects
         super().__init__()
 
-    def get_end_measurement_message(self):
+    def _get_end_measurement_message(self):
         """
         Make sure the end measurement results of the sub sweep objects are accessible from the top level interface
 
@@ -220,7 +232,7 @@ class CompoundSweep(BaseSweepObject):
         self._after_end_msg = dict()
 
         for so in self._sweep_objects:
-            msg = so.get_end_measurement_message()
+            msg = so._get_end_measurement_message()
             msgs.update(msg)
 
         return msgs
