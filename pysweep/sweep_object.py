@@ -4,6 +4,7 @@ perform measurements at different phases in the loop: either after the start of 
 each of the set points in the sweep.
 """
 import time
+from functools import partial
 from collections import OrderedDict
 
 import qcodes
@@ -128,7 +129,7 @@ class BaseSweepObject:
     def __next__(self):
         return next(self._param_setter)
 
-    def after_each(self, func):
+    def after_each(self, func, **kwargs):
         """
         Perform a measurement at each set point
 
@@ -142,10 +143,10 @@ class BaseSweepObject:
         -------
         self
         """
-        self._measure_functions["after_each"].append(func)
+        self._measure_functions["after_each"].append(partial(func, **kwargs))
         return self
 
-    def after_start(self, func):
+    def after_start(self, func, **kwargs):
         """
         Perform a measurement after setting the first set point in a sweep
 
@@ -158,10 +159,10 @@ class BaseSweepObject:
         -------
         self
         """
-        self._measure_functions["after_start"].append(func)
+        self._measure_functions["after_start"].append(partial(func, **kwargs))
         return self
 
-    def after_end(self, func):
+    def after_end(self, func, **kwargs):
         """
         Perform a measurement after finishing a sweep
 
@@ -174,7 +175,7 @@ class BaseSweepObject:
         -------
         self
         """
-        self._measure_functions["after_end"].append(func)
+        self._measure_functions["after_end"].append(partial(func, **kwargs))
         return self
 
     def set_station(self, station):
