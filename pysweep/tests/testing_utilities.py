@@ -61,9 +61,12 @@ class ParameterFactory(BaseObjectFactory):
         def setter(v):
             self._std_out.write("setting {} to {}".format(label, v))
 
+        def getter():
+            return 0
+
         label = "parameter {}".format(self._counter)
         self._counter += 1
-        return (), {"name": label, "set_cmd": setter, "unit": "V"}
+        return (), {"name": label, "set_cmd": setter, "get_cmd": getter, "unit": "V"}
 
 
 class SweepValuesFactory(BaseObjectFactory):

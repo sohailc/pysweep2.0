@@ -7,7 +7,7 @@ from pysweep.sweep_object import sweep, nested_sweep, zip_sweep, BaseSweepObject
 
 from .testing_utilities import sorted_dict, StdIOMock, ParameterFactory, SweepValuesFactory
 
-param_log_format = ParameterSweep.log_format
+param_log_format = ParameterSweep.parameter_log_format
 
 
 def equivalence_test(test_function, compare_function):
@@ -97,7 +97,55 @@ def test_product():
     equivalence_test(test, compare)
 
 
-def test_after_each():
+def test_after_each_parameter():
+
+    def test(params, values, stdio, measure, namespace):
+
+        param1, param2, param3, param4, param5 = params[:5]
+        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
+
+        for i in nested_sweep(
+                sweep(param1, sweep_values1),
+                sweep(param2, sweep_values2),
+                sweep(param3, sweep_values3).after_each(param5).set_namespace(namespace),
+                sweep(param4, sweep_values4),
+        ):
+            stdio.write(sorted_dict(i))
+
+        return str(stdio)
+
+    def compare(params, values, stdio, measure, namespace):
+
+        param1, param2, param3, param4, param5 = params[:5]
+        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
+
+        for value4 in sweep_values4:
+            param4.set(value4)
+            for value3 in sweep_values3:
+
+                param3.set(value3)
+                measure_dict = param_log_format(param5, param5(), setting=False)
+
+                for value2 in sweep_values2:
+                    param2.set(value2)
+                    for value1 in sweep_values1:
+                        param1.set(value1)
+
+                        values = [value1, value2, value3, value4]
+                        params = [param1, param2, param3, param4]
+
+                        dct = sorted_dict([
+                            param_log_format(p, value) for p, value in zip(params, values)])
+
+                        dct.update(measure_dict)
+                        stdio.write(dct)
+
+        return str(stdio)
+
+    equivalence_test(test, compare)
+
+
+def test_after_each_function():
 
     def test(params, values, stdio, measure, namespace):
 

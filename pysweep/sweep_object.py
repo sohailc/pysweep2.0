@@ -31,6 +31,35 @@ class BaseSweepObject:
        The meaning and signatures of these methods are explained in their respective doc strings.
     """
 
+    @staticmethod
+    def parameter_log_format(parameter, value, setting=True):
+        """
+        The standard method of logging the setting or retrieving a parameter value
+
+        Parameters
+        ----------
+        parameter: qcodes.StandardParameter
+        value: float
+            Either the set or the get value of the parameter. As the sole responsibility of this function is to log
+            the setting or retrieving of parameter values, the setting and getting should have been done on the calling
+            side.
+        setting: bool, optional (True)
+            Are we setting a parameter or retrieving it? If we are setting it, the the parameters is coupled to an
+            independent measurement parameter. If we are retrieving it (measuring it), which means it is an dependent
+            parameter
+        """
+        if parameter._instrument is not None:  # TODO: Make a QCoDeS pull request to access this through a public
+            # interface
+            label = "{}_{}".format(parameter._instrument.name, parameter.label)
+        else:
+            label = parameter.label
+
+        log_dict = {label: {"unit": parameter.unit, "value": value}}
+        if setting:
+            log_dict[label]["independent_parameter"] = True
+
+        return OrderedDict(log_dict)
+
     @classmethod
     def add_alias(cls, name, func):
         """
@@ -129,20 +158,43 @@ class BaseSweepObject:
     def __next__(self):
         return next(self._param_setter)
 
+    def _after_each_get_param(self, parameter):
+        """
+        After each iteration, retrieve the value of a qcodes parameter
+
+        Parameters
+        ----------
+        parameter: qcodes.StandardParameter
+
+        Returns
+        -------
+        self
+        """
+        def setter_function(station, namespace):
+            value = parameter()
+            return self.parameter_log_format(parameter, value, setting=False)
+
+        self._measure_functions["after_each"].append(setter_function)
+        return self
+
     def after_each(self, func, **kwargs):
         """
         Perform a measurement at each set point
 
         Parameters
         ----------
-        func: callable
-            A callable of two parameters: station, namespace. This callable returns the result of the measurement
-            in a JSON compatible dictionary (e.g. {"gate_voltage": {"unit": "V", "value": 2.3}} )
+        func: callable, or qcodes.StandardParameter
+            When a callable: A callable of two parameters: station, namespace. This callable returns the result of the
+            measurement in a JSON compatible dictionary (e.g. {"gate_voltage": {"unit": "V", "value": 2.3}} )
 
+            When a qcodes parameter: A parameter with a get method or command
         Returns
         -------
         self
         """
+        if isinstance(func, qcodes.StandardParameter):
+            return self._after_each_get_param(func)
+
         self._measure_functions["after_each"].append(partial(func, **kwargs))
         return self
 
@@ -313,21 +365,6 @@ class ParameterSweep(BaseSweepObject):
         A callable of two parameters: station, namespace, returning an iterator. Unrolling this iterator returns to
         us set values of the parameter
     """
-
-    @staticmethod
-    def log_format(parameter, set_value):
-        if parameter._instrument is not None:  # TODO: Make a QCoDeS pull request to access this through a public
-            # interface
-            label = "{}_{}".format(parameter._instrument.name, parameter.label)
-        else:
-            label = parameter.label
-
-        return OrderedDict({label: {
-            "unit": parameter.unit,
-            "value": set_value,
-            "independent_parameter": True
-        }})
-
     def __init__(self, parameter, point_function):
         self._parameter = parameter
         self._point_function = point_function
@@ -336,7 +373,7 @@ class ParameterSweep(BaseSweepObject):
     def _setter_factory(self):
         for set_value in self._point_function(self._station, self._namespace):
             self._parameter.set(set_value)
-            yield ParameterSweep.log_format(self._parameter, set_value)
+            yield ParameterSweep.parameter_log_format(self._parameter, set_value)
 
 
 class FunctionSweep(BaseSweepObject):
