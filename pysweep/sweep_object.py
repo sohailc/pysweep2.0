@@ -316,7 +316,8 @@ class ParameterSweep(BaseSweepObject):
 
     @staticmethod
     def log_format(parameter, set_value):
-        if parameter._instrument is not None:
+        if parameter._instrument is not None:  # TODO: Make a QCoDeS pull request to access this through a public
+            # interface
             label = "{}_{}".format(parameter._instrument.name, parameter.label)
         else:
             label = parameter.label
