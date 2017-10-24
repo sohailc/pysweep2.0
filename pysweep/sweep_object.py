@@ -316,7 +316,12 @@ class ParameterSweep(BaseSweepObject):
 
     @staticmethod
     def log_format(parameter, set_value):
-        return OrderedDict({parameter.label: {
+        if parameter._instrument is not None:
+            label = "{}_{}".format(parameter._instrument.name, parameter.label)
+        else:
+            label = parameter.label
+
+        return OrderedDict({label: {
             "unit": parameter.unit,
             "value": set_value,
             "independent_parameter": True
