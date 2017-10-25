@@ -21,20 +21,30 @@ class Measurement:
     def get_default_formatter(cls):
         return cls.formatter_class(*cls.formatter_args, **cls.formatter_kwargs)
 
+    @staticmethod
+    def _make_list(value):
+        if not isinstance(value, list):
+            return [value]
+        return value
+
     def __init__(self, setup, cleanup, sweep_objects, measures=None, output_formatter=None):
 
-        self._setup = setup
-        self._cleanup = cleanup
+        self._setup = Measurement._make_list(setup)
+        self._cleanup = Measurement._make_list(cleanup)
 
         self._sweep_object = nested_sweep(*sweep_objects) if isinstance(sweep_objects, list) else sweep_objects
         self._measures = measures or []
         self._output_formatter = output_formatter or Measurement.get_default_formatter()
 
         self.name = None
+        self._has_run = False
 
-    def run(self, name):
+    def run(self):
 
-        self.name = name
+        if self._has_run:
+            raise RuntimeError("This measurement has already run. Running twice is disallowed")
+        self._has_run = True
+
         namespace = Namespace()
         self._sweep_object.set_station(Measurement.station)
         self._sweep_object.set_namespace(namespace)
@@ -42,12 +52,17 @@ class Measurement:
         for measure in self._measures:
             self._sweep_object.after_each(measure)
 
-        self._setup(Measurement.station, namespace)
+        for setup_function in self._setup:
+            setup_function(Measurement.station, namespace)
+
         for log_line in self._sweep_object:
             self._output_formatter.add(log_line)
 
         self._output_formatter.finalize()
-        self._cleanup(Measurement.station, namespace)
+
+        for cleanup_function in self._cleanup:
+            cleanup_function(Measurement.station, namespace)
+
         self._sweep_object.set_namespace(None)
 
         return self

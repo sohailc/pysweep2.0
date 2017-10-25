@@ -177,7 +177,22 @@ class BaseSweepObject:
         self._measure_functions["after_each"].append(setter_function)
         return self
 
-    def after_each(self, func, **kwargs):
+    def _after_each_call_function(self, func):
+        """
+        After each iteration, execute a function
+
+        Parameters
+        ----------
+        func: callable of station, namespace
+
+        Returns
+        -------
+        self
+        """
+        self._measure_functions["after_each"].append(func)
+        return self
+
+    def after_each(self, *objects):
         """
         Perform a measurement at each set point
 
@@ -192,13 +207,13 @@ class BaseSweepObject:
         -------
         self
         """
-        if isinstance(func, qcodes.StandardParameter):
-            return self._after_each_get_param(func)
+        for obj in objects:
+            if isinstance(obj, qcodes.StandardParameter):
+                return self._after_each_get_param(obj)
+            else:
+                return self._after_each_call_function(obj)
 
-        self._measure_functions["after_each"].append(partial(func, **kwargs))
-        return self
-
-    def after_start(self, func, **kwargs):
+    def after_start(self, func):
         """
         Perform a measurement after setting the first set point in a sweep
 
@@ -211,10 +226,10 @@ class BaseSweepObject:
         -------
         self
         """
-        self._measure_functions["after_start"].append(partial(func, **kwargs))
+        self._measure_functions["after_start"].append(partial(func))
         return self
 
-    def after_end(self, func, **kwargs):
+    def after_end(self, func):
         """
         Perform a measurement after finishing a sweep
 
@@ -227,7 +242,7 @@ class BaseSweepObject:
         -------
         self
         """
-        self._measure_functions["after_end"].append(partial(func, **kwargs))
+        self._measure_functions["after_end"].append(partial(func))
         return self
 
     def set_station(self, station):
