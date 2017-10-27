@@ -1,5 +1,5 @@
 from pysweep import Namespace
-from pysweep.sweep_object import nested_sweep
+from pysweep.sweep_object import ChainSweep
 from pysweep.output_formatter import DictFormatter
 from pysweep.spyview import SpyviewFormatter
 
@@ -27,13 +27,11 @@ class Measurement:
             return [value]
         return value
 
-    def __init__(self, setup, cleanup, sweep_objects, measures=None, output_formatter=None):
+    def __init__(self, setup, cleanup, sweep_objects, output_formatter=None):
 
         self._setup = Measurement._make_list(setup)
         self._cleanup = Measurement._make_list(cleanup)
-
-        self._sweep_object = nested_sweep(*sweep_objects) if isinstance(sweep_objects, list) else sweep_objects
-        self._measures = measures or []
+        self._sweep_object = ChainSweep([sweep_objects])
         self._output_formatter = output_formatter or Measurement.get_default_formatter()
 
         self.name = None
@@ -48,9 +46,6 @@ class Measurement:
         namespace = Namespace()
         self._sweep_object.set_station(Measurement.station)
         self._sweep_object.set_namespace(namespace)
-
-        for measure in self._measures:
-            self._sweep_object.after_each(measure)
 
         for setup_function in self._setup:
             setup_function(Measurement.station, namespace)
