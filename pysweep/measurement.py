@@ -62,8 +62,8 @@ class Measurement:
 
         return self
 
-    def output(self):
-        return self._output_formatter.output()
+    def output(self, *args):
+        return self._output_formatter.output(*args)
 
 
 formatters = {
