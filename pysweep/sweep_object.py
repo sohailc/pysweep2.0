@@ -7,6 +7,7 @@ import time
 from collections import OrderedDict
 
 import qcodes
+import qcodes.instrument.parameter
 
 
 class BaseSweepObject:
@@ -136,7 +137,7 @@ class CompoundSweep(BaseSweepObject):
                 so = ChainSweep(so)
             elif isinstance(so, tuple):
                 so = NestedSweep(so)
-            elif isinstance(so, qcodes.StandardParameter):
+            elif isinstance(so, qcodes.instrument.parameter.Parameter):
                 so = ParameterWrapper(so)
             elif isinstance(so, BaseSweepObject):
                 so = so
@@ -416,7 +417,7 @@ def sweep(obj, sweep_points):
     else:
         point_function = sweep_points
 
-    if not isinstance(obj, qcodes.StandardParameter):
+    if not isinstance(obj, qcodes.instrument.parameter.Parameter):
         if not callable(obj):
             raise ValueError("The object to sweep over needs to either be a QCoDeS parameter or a function")
 
