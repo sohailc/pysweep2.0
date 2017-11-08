@@ -1,11 +1,13 @@
-from distutils.core import setup
+from setuptools import find_packages, setup
 
 setup(
     name='pysweep2',
     version='0.1',
     description='Easily sweep QCoDeS parameters',
+    license='MIT',
     author='Sohail Chatoor',
     author_email='a-sochat@microsoft.com',
     url='https://github.com/sohailc/pysweep2.0',
-    packages=['pysweep', 'pysweep.data_storage', 'pysweep.docs', 'pysweep.tests']
+    packages=find_packages(),
+    python_requires='>=3',
 )

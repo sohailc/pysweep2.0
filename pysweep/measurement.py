@@ -73,7 +73,7 @@ storage_classes = {
         "args": [],
         "kwargs": dict()
     },
-    "dict": {
+    "json": {
         "storage_class": JSONStorage,
         "args": [],
         "kwargs": dict(unit="replace", value="append", independent_parameter="replace")
