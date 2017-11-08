@@ -1,12 +1,12 @@
 import os
-import numpy as np
 from collections import defaultdict
 
-from pysweep.output_formatter import BaseFormatter
-from pysweep.utils import DictMerge
-
+import numpy as np
 import qcodes
 import qcodes.data.location
+
+from pysweep.data_storage.base_storage import BaseStorage
+from pysweep.utils import DictMerge
 
 
 class SpyviewMetaWriter:
@@ -67,7 +67,10 @@ class SpyviewMetaWriter:
             fh.write("\n".join(property_values))
 
 
-class SpyviewFormatter(BaseFormatter):
+class SpyviewStorage(BaseStorage):
+    """
+    Save measurement results as spyview files
+    """
 
     @staticmethod
     def default_file_path():
@@ -84,7 +87,7 @@ class SpyviewFormatter(BaseFormatter):
         return file_path
 
     def __init__(self, delayed_parameters=None, output_file_path=None, max_buffer_size=1000):
-        self._output_file_path = output_file_path or SpyviewFormatter.default_file_path()
+        self._output_file_path = output_file_path or SpyviewStorage.default_file_path()
         self._max_buffer_size = max_buffer_size
         self._delayed_parameters = delayed_parameters or []
 

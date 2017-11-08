@@ -3,28 +3,20 @@ import time
 
 import pysweep
 import pysweep.utils
-from pysweep.sweep_object import sweep, nested_sweep, zip_sweep, BaseSweepObject, ParameterSweep
+from pysweep.sweep_object import sweep, nested_sweep, ParameterSweep, ChainSweep
 
-from .testing_utilities import sorted_dict, StdIOMock, ParameterFactory, SweepValuesFactory
+from .testing_utilities import sorted_dict, StdIOMock, ParameterFactory, SweepValuesFactory, MeasurementFunctionFactory
 
 param_log_format = ParameterSweep.parameter_log_format
 
 
 def equivalence_test(test_function, compare_function):
 
-    def measure(station, namespace):
-        hs = hash(str(stdio_mock))
-        if not hasattr(namespace, "measurements"):
-            namespace.measurement = [hs]
-        else:
-            namespace.measurement.append(hs)
-
-        stdio_mock.write("measurement returns {}".format(hs))
-        return OrderedDict({"some measurement": hs})
-
     stdio_mock = StdIOMock()
-    args = (ParameterFactory(stdio_mock), SweepValuesFactory(), stdio_mock, measure, pysweep.Namespace())
+    args = (ParameterFactory(stdio_mock), SweepValuesFactory(), stdio_mock, MeasurementFunctionFactory(stdio_mock),
+            pysweep.Namespace())
 
+    stdio_mock.flush()
     test_out = test_function(*args)
     stdio_mock.flush()
     compare_out = compare_function(*args)
@@ -55,528 +47,36 @@ def test_sanity():
 
 def test_product():
 
-    def test(params, values, stdio, measure, namespace):
+    def test(params, values, stdio, measures, namespace):
 
         param1, param2, param3, param4 = params[:4]
         sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
 
-        for i in nested_sweep(
+        so = nested_sweep(
             sweep(param1, sweep_values1),
             sweep(param2, sweep_values2),
             sweep(param3, sweep_values3),
             sweep(param4, sweep_values4),
-        ):
+        )
+
+        for i in so:
             stdio.write(sorted_dict(i))
 
         return str(stdio)
 
-    def compare(params, values, stdio, measure, namespace):
+    def compare(params, values, stdio, measures, namespace):
 
         param1, param2, param3, param4 = params[:4]
         sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
 
-        for value4 in sweep_values4:
-            param4.set(value4)
-            for value3 in sweep_values3:
-                param3.set(value3)
-                for value2 in sweep_values2:
-                    param2.set(value2)
-                    for value1 in sweep_values1:
-                        param1.set(value1)
-
-                        values = [value1, value2, value3, value4]
-                        params = [param1, param2, param3, param4]
-
-                        dct = sorted_dict([
-                            param_log_format(p, value) for p, value in zip(params, values)])
-
-                        stdio.write(dct)
-
-        return str(stdio)
-
-    equivalence_test(test, compare)
-
-
-def test_after_each_parameter():
-
-    def test(params, values, stdio, measure, namespace):
-
-        param1, param2, param3, param4, param5 = params[:5]
-        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
-
-        for i in nested_sweep(
-                sweep(param1, sweep_values1),
-                sweep(param2, sweep_values2),
-                sweep(param3, sweep_values3).after_each(param5).set_namespace(namespace),
-                sweep(param4, sweep_values4),
-        ):
-            stdio.write(sorted_dict(i))
-
-        return str(stdio)
-
-    def compare(params, values, stdio, measure, namespace):
-
-        param1, param2, param3, param4, param5 = params[:5]
-        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
-
-        for value4 in sweep_values4:
-            param4.set(value4)
-            for value3 in sweep_values3:
-
-                param3.set(value3)
-                measure_dict = param_log_format(param5, param5(), setting=False)
-
-                for value2 in sweep_values2:
-                    param2.set(value2)
-                    for value1 in sweep_values1:
-                        param1.set(value1)
-
-                        values = [value1, value2, value3, value4]
-                        params = [param1, param2, param3, param4]
-
-                        dct = sorted_dict([
-                            param_log_format(p, value) for p, value in zip(params, values)])
-
-                        dct.update(measure_dict)
-                        stdio.write(dct)
-
-        return str(stdio)
-
-    equivalence_test(test, compare)
-
-
-def test_after_each_function():
-
-    def test(params, values, stdio, measure, namespace):
-
-        param1, param2, param3, param4 = params[:4]
-        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
-
-        for i in nested_sweep(
-                sweep(param1, sweep_values1),
-                sweep(param2, sweep_values2),
-                sweep(param3, sweep_values3).after_each(measure).set_namespace(namespace),
-                sweep(param4, sweep_values4),
-        ):
-            stdio.write(sorted_dict(i))
-
-        return str(stdio)
-
-    def compare(params, values, stdio, measure, namespace):
-
-        param1, param2, param3, param4 = params[:4]
-        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
-
-        for value4 in sweep_values4:
-            param4.set(value4)
-            for value3 in sweep_values3:
-
-                param3.set(value3)
-                measure_dict = measure(None, namespace)
-
-                for value2 in sweep_values2:
-                    param2.set(value2)
-                    for value1 in sweep_values1:
-                        param1.set(value1)
-
-                        values = [value1, value2, value3, value4]
-                        params = [param1, param2, param3, param4]
-
-                        dct = sorted_dict([
-                            param_log_format(p, value) for p, value in zip(params, values)])
-
-                        dct.update(measure_dict)
-                        stdio.write(dct)
-
-        return str(stdio)
-
-    equivalence_test(test, compare)
-
-
-def test_before_each():
-    """
-    Some measurements are less trivial to implement with pysweep, including performing a measurement right before
-    setting a parameter
-    """
-
-    # Test that this ...
-    def test(params, values, stdio, measure, namespace):
-
-        def wrapped(station, nspace, value):
-            measure(None, nspace)
-            params[0].set(value)
-            return {params[0].label: {"unit": params[0].unit, "value": value}}
-
-        for i in sweep(wrapped, values[0]).set_namespace(namespace):
-            stdio.write(sorted_dict(i))
-
-        return str(stdio)
-
-    # Is equivalent to this
-    def compare(params, values, stdio, measure, namespace):
-        for value in values[0]:
-            measure(None, namespace)
-            params[0].set(value)
-            dct = sorted_dict({params[0].label: {"unit": params[0].unit, "value": value}})
-            stdio.write(dct)
-
-        return str(stdio)
-
-    equivalence_test(test, compare)
-
-
-def test_after_end():
-
-    def test(params, values, stdio, measure, namespace):
-
-        param1, param2, param3, param4 = params[:4]
-        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
-
-        for i in nested_sweep(
-                sweep(param1, sweep_values1),
-                sweep(param2, sweep_values2),
-                sweep(param3, sweep_values3).after_end(measure).set_namespace(namespace),
-                sweep(param4, sweep_values4),
-        ):
-            stdio.write(sorted_dict(i))
-
-        return str(stdio)
-
-    def compare(params, values, stdio, measure, namespace):
-
-        param1, param2, param3, param4 = params[:4]
-        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
-
-        after_end_msg = OrderedDict()
-        for count, value4 in enumerate(sweep_values4):
-            if count > 0:
-                after_end_msg = measure(None, namespace)
-
-            param4.set(value4)
-            for value3 in sweep_values3:
-                param3.set(value3)
-
-                for value2 in sweep_values2:
-                    param2.set(value2)
-
-                    for value1 in sweep_values1:
-                        param1.set(value1)
-
-                        values = [value1, value2, value3, value4]
-                        params = [param1, param2, param3, param4]
-
-                        dct = sorted_dict([
-                            param_log_format(p, value) for p, value in zip(params, values)])
-                        dct.update(after_end_msg)
-                        after_end_msg = OrderedDict()
-
-                        stdio.write(dct)
-
-        after_end_msg = measure(None, namespace)  # Notice that we need to run measure at the very end
-        # again.
-        if after_end_msg != OrderedDict():
-            stdio.write(after_end_msg)
-
-        return str(stdio)
-
-    equivalence_test(test, compare)
-
-
-def test_after_start():
-
-    def test(params, values, stdio, measure, namespace):
-
-        param1, param2, param3, param4 = params[:4]
-        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
-
-        for i in nested_sweep(
-                sweep(param1, sweep_values1),
-                sweep(param2, sweep_values2),
-                sweep(param3, sweep_values3).after_start(measure).set_namespace(namespace),
-                sweep(param4, sweep_values4),
-        ):
-            stdio.write(sorted_dict(i))
-
-        return stdio
-
-    def compare(params, values, stdio, measure, namespace):
-
-        param1, param2, param3, param4 = params[:4]
-        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
-
-        for value4 in sweep_values4:
-            param4.set(value4)
-            start = True
-
-            for value3 in sweep_values3:
-                param3.set(value3)
-
-                if start:
-                    measure(None, namespace)
-                    start = False
-
-                for value2 in sweep_values2:
-                    param2.set(value2)
-
-                    for value1 in sweep_values1:
-                        param1.set(value1)
-
-                        values = [value1, value2, value3, value4]
-                        params = [param1, param2, param3, param4]
-
-                        dct = sorted_dict([
-                            param_log_format(p, value) for p, value in zip(params, values)])
-                        stdio.write(dct)
-
-        return stdio
-
-    equivalence_test(test, compare)
-
-
-def test_zip():
-
-    def test(params, values, stdio, measure, namespace):
-
-        param1, param2, param3, param4 = params[:4]
-        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
-
-        for i in zip_sweep(
-            sweep(param1, sweep_values1),
-            sweep(param2, sweep_values2),
-            sweep(param3, sweep_values3),
-            sweep(param4, sweep_values4),
-        ):
-            stdio.write(sorted_dict(i))
-
-        return stdio
-
-    def compare(params, values, stdio, measure, namespace):
-
-        param1, param2, param3, param4 = params[:4]
-        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
-
-        for value1, value2, value3, value4 in zip(sweep_values1, sweep_values2, sweep_values3, sweep_values4):
+        for value1 in sweep_values1:
             param1.set(value1)
-            param2.set(value2)
-            param3.set(value3)
-            param4.set(value4)
-
-            values = [value1, value2, value3, value4]
-            params = [param1, param2, param3, param4]
-
-            dct = sorted_dict([
-                param_log_format(p, value) for p, value in zip(params, values)])
-            stdio.write(dct)
-
-        return stdio
-
-    equivalence_test(test, compare)
-
-
-def test_product_zip():
-
-    def test(params, values, stdio, measure, namespace):
-
-        param1, param2, param3, param4 = params[:4]
-        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
-
-        # Test that this ...
-        for i in nested_sweep(
-            zip_sweep(
-                sweep(param1, sweep_values1),
-                sweep(param2, sweep_values2)
-            ),
-            zip_sweep(
-                sweep(param3, sweep_values3),
-                sweep(param4, sweep_values4)
-            )
-        ):
-            stdio.write(sorted_dict(i))
-
-        return stdio
-
-    def compare(params, values, stdio, measure, namespace):
-
-        param1, param2, param3, param4 = params[:4]
-        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
-
-        # Is equivalent to this
-        for value3, value4 in zip(sweep_values3, sweep_values4):
-            param3.set(value3)
-            param4.set(value4)
-            for value1, value2 in zip(sweep_values1, sweep_values2):
-                param1.set(value1)
-                param2.set(value2)
-
-                values = [value1, value2, value3, value4]
-                params = [param1, param2, param3, param4]
-
-                dct = sorted_dict([
-                    param_log_format(p, value) for p, value in zip(params, values)])
-                stdio.write(dct)
-
-        return stdio
-
-    equivalence_test(test, compare)
-
-
-def test_zip_product():
-
-    def test(params, values, stdio, measure, namespace):
-
-        param1, param2, param3, param4 = params[:4]
-        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
-
-        for i in zip_sweep(
-            nested_sweep(
-                sweep(param1, sweep_values1),
-                sweep(param2, sweep_values2)
-            ),
-            nested_sweep(
-                sweep(param3, sweep_values3),
-                sweep(param4, sweep_values4)
-            )
-        ):
-            stdio.write(sorted_dict(i))
-
-        return stdio
-
-    def compare(params, values, stdio, measure, namespace):
-
-        param1, param2, param3, param4 = params[:4]
-        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
-
-        def gen1():
             for value2 in sweep_values2:
                 param2.set(value2)
-                for value1 in sweep_values1:
-                    param1.set(value1)
-
-                    values = [value1, value2]
-                    params = [param1, param2]
-
-                    dct = sorted_dict([
-                        param_log_format(p, value) for p, value in zip(params, values)])
-
-                    yield dct
-
-        def gen2():
-            for value4 in sweep_values4:
-                param4.set(value4)
                 for value3 in sweep_values3:
                     param3.set(value3)
-
-                    values = [value3, value4]
-                    params = [param3, param4]
-
-                    dct = sorted_dict([
-                        param_log_format(p, value) for p, value in zip(params, values)])
-
-                    yield dct
-
-        for d1, d2 in zip(gen1(), gen2()):
-            dct = {}
-            dct.update(d1)
-            dct.update(d2)
-            stdio.write(sorted_dict(dct))
-
-        return stdio
-
-    equivalence_test(test, compare)
-
-
-def test_top_level_after_end():
-
-    def test(params, values, stdio, measure, namespace):
-
-        param1, param2, param3, param4 = params[:4]
-        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
-
-        # Test that this ...
-        for i in nested_sweep(
-            zip_sweep(
-                sweep(param1, sweep_values1),
-                sweep(param2, sweep_values2)
-            ).after_end(measure).set_namespace(namespace),
-            zip_sweep(
-                sweep(param3, sweep_values3),
-                sweep(param4, sweep_values4)
-            )
-        ):
-            stdio.write(sorted_dict(i))
-
-        return stdio
-
-    def compare(params, values, stdio, measure, namespace):
-
-        param1, param2, param3, param4 = params[:4]
-        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
-
-        # Is equivalent to this
-        after_end_msg = OrderedDict()
-        for count, (value3, value4) in enumerate(zip(sweep_values3, sweep_values4)):
-            param3.set(value3)
-            param4.set(value4)
-
-            if count > 0:
-                after_end_msg = measure(None, namespace)
-
-            for value1, value2 in zip(sweep_values1, sweep_values2):
-                param1.set(value1)
-                param2.set(value2)
-
-                values = [value1, value2, value3, value4]
-                params = [param1, param2, param3, param4]
-
-                dct = sorted_dict([
-                    param_log_format(p, value) for p, value in zip(params, values)])
-                dct.update(after_end_msg)
-
-                stdio.write(dct)
-
-        after_end_msg = measure(None, namespace)
-        if after_end_msg != OrderedDict():
-            stdio.write(after_end_msg)
-
-        return stdio
-
-    equivalence_test(test, compare)
-
-
-def test_set_namespace_top_level():
-
-    def test(params, values, stdio, measure, namespace):
-
-        param1, param2, param3, param4 = params[:4]
-        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
-
-        for i in nested_sweep(
-                sweep(param1, sweep_values1),
-                sweep(param2, sweep_values2),
-                sweep(param3, sweep_values3).after_each(measure),
-                sweep(param4, sweep_values4),
-        ).set_namespace(namespace):
-
-            stdio.write(sorted_dict(i))
-
-        return str(stdio)
-
-    def compare(params, values, stdio, measure, namespace):
-
-        param1, param2, param3, param4 = params[:4]
-        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
-
-        for value4 in sweep_values4:
-            param4.set(value4)
-            for value3 in sweep_values3:
-
-                param3.set(value3)
-                measure_dict = measure(None, namespace)
-
-                for value2 in sweep_values2:
-                    param2.set(value2)
-                    for value1 in sweep_values1:
-                        param1.set(value1)
+                    for value4 in sweep_values4:
+                        param4.set(value4)
 
                         values = [value1, value2, value3, value4]
                         params = [param1, param2, param3, param4]
@@ -584,7 +84,6 @@ def test_set_namespace_top_level():
                         dct = sorted_dict([
                             param_log_format(p, value) for p, value in zip(params, values)])
 
-                        dct.update(measure_dict)
                         stdio.write(dct)
 
         return str(stdio)
@@ -592,40 +91,164 @@ def test_set_namespace_top_level():
     equivalence_test(test, compare)
 
 
-def test_alias():
+def test_measure():
 
-    def log_time():
-        tb = time.time()
+    def test1(params, values, stdio, measures, namespace):
 
-        def inner(station, namespace):
-            return {"time": {"unit": "s", "value": "{:.2}".format(time.time() - tb)}}
-        return inner
+        param1, param2, param3, param4 = params[:4]
+        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
+        measure = measures[0]
 
-    BaseSweepObject.add_alias("log_time", lambda so: so.after_each(log_time()))
-    BaseSweepObject.add_alias("sleep", lambda so, t: so.after_each(pysweep.utils.sleep(t)))
+        so = nested_sweep(
+            sweep(param1, sweep_values1),
+            sweep(param2, sweep_values2),
+            measure,
+            sweep(param3, sweep_values3),
+            sweep(param4, sweep_values4),
+        )
 
-    def test(params, values, stdio, measure, namespace):
-        param1 = params[0]
-        sweep_values1 = values[0]
+        for i in so.set_namespace(namespace):
+            stdio.write(sorted_dict(i))
 
-        for i in sweep(param1, sweep_values1).sleep(.1).log_time():
-            stdio.write(i)
+        return str(stdio)
 
-        return stdio
+    def test2(params, values, stdio, measures, namespace):
 
-    def compare(params, values, stdio, measure, namespace):
-        param1 = params[0]
-        sweep_values1 = values[0]
+        param1, param2, param3, param4 = params[:4]
+        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
+        measure = measures[0]
 
-        time_logger = log_time()
-        for value in sweep_values1:
-            param1.set(value)
-            time.sleep(.1)
-            d = param_log_format(param1, value)
-            d.update(time_logger(None, None))
-            stdio.write(d)
+        so = ChainSweep([(
+            sweep(param1, sweep_values1),
+            sweep(param2, sweep_values2),
+            measure,
+            sweep(param3, sweep_values3),
+            sweep(param4, sweep_values4),
+        )])
 
-        return stdio
+        for i in so.set_namespace(namespace):
+            stdio.write(sorted_dict(i))
 
-    equivalence_test(test, compare)
+        return str(stdio)
 
+    def compare(params, values, stdio, measures, namespace):
+
+        param1, param2, param3, param4 = params[:4]
+        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
+        measure = measures[0]
+
+        for value1 in sweep_values1:
+            param1.set(value1)
+            for value2 in sweep_values2:
+                param2.set(value2)
+                measure_dct = measure(None, namespace)
+                for value3 in sweep_values3:
+                    param3.set(value3)
+                    for value4 in sweep_values4:
+                        param4.set(value4)
+
+                        values = [value1, value2, value3, value4]
+                        params = [param1, param2, param3, param4]
+
+                        dct = sorted_dict([
+                            param_log_format(p, value) for p, value in zip(params, values)])
+                        measure_dct.update(dct)
+
+                        stdio.write(measure_dct)
+
+        return str(stdio)
+
+    equivalence_test(test1, compare)
+    equivalence_test(test2, compare)
+
+
+def test_chain_nest():
+
+    def test1(params, values, stdio, measures, namespace):
+
+        param1, param2, param3, param4 = params[:4]
+        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
+        measure1, measure2 = measures[:2]
+
+        so = ChainSweep([(
+            sweep(param1, sweep_values1),
+            sweep(param2, sweep_values2),
+            measure1,
+        ), (
+            sweep(param3, sweep_values3),
+            sweep(param4, sweep_values4),
+            measure2
+        )])
+
+        for i in so.set_namespace(namespace):
+            stdio.write(sorted_dict(i))
+
+        return str(stdio)
+
+    def test2(params, values, stdio, measures, namespace):
+
+        param1, param2, param3, param4 = params[:4]
+        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
+        measure1, measure2 = measures[:2]
+
+        so1 = \
+            sweep(param1, sweep_values1)(
+                sweep(param2, sweep_values2)(
+                    measure1
+                )
+            )
+
+        so2 = \
+            sweep(param3, sweep_values3)(
+                sweep(param4, sweep_values4)(
+                    measure2
+                )
+            )
+
+        so = ChainSweep([so1, so2])
+
+        for i in so.set_namespace(namespace):
+            stdio.write(sorted_dict(i))
+
+        return str(stdio)
+
+    def compare(params, values, stdio, measures, namespace):
+
+        param1, param2, param3, param4 = params[:4]
+        sweep_values1, sweep_values2, sweep_values3, sweep_values4 = values[:4]
+        measure1, measure2 = measures[:2]
+
+        for value1 in sweep_values1:
+            param1(value1)
+            for value2 in sweep_values2:
+                param2(value2)
+                measure_dct = measure1(None, namespace)
+
+                values = [value1, value2]
+                params = [param1, param2]
+
+                dct = sorted_dict([
+                    param_log_format(p, value) for p, value in zip(params, values)])
+                measure_dct.update(dct)
+
+                stdio.write(measure_dct)
+
+        for value3 in sweep_values3:
+            param3(value3)
+            for value4 in sweep_values4:
+                param4(value4)
+                measure_dct = measure2(None, namespace)
+
+                values = [value3, value4]
+                params = [param3, param4]
+
+                dct = sorted_dict([
+                    param_log_format(p, value) for p, value in zip(params, values)])
+                measure_dct.update(dct)
+
+                stdio.write(measure_dct)
+
+        return str(stdio)
+
+    equivalence_test(test1, compare)
+    equivalence_test(test2, compare)

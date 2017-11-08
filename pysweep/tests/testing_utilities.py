@@ -18,6 +18,25 @@ class StdIOMock:
         self._buffer = ""
 
 
+class MeasureFunction:
+    name = 0
+
+    def __init__(self, stdio):
+        self._stdio = stdio
+        self._name = str(MeasureFunction.name)
+        MeasureFunction.name += 1
+
+    def __call__(self, station, namespace):
+        hs = hash(str(self._stdio))
+        if not hasattr(namespace, "measurements"):
+            namespace.measurement = [hs]
+        else:
+            namespace.measurement.append(hs)
+
+        self._stdio.write("measurement {} returns {}".format(hs, self._name))
+        return OrderedDict({"measurement_{}".format(self._name): hs})
+
+
 class BaseObjectFactory:
     def __init__(self, ObjectType):
         self._ObjectType = ObjectType
@@ -76,6 +95,15 @@ class SweepValuesFactory(BaseObjectFactory):
     def _args_function(self):
         l = int(np.random.uniform(3, 6))
         return (np.random.normal(0, 1.0, l),), {}
+
+
+class MeasurementFunctionFactory(BaseObjectFactory):
+    def __init__(self, std_out):
+        super().__init__(MeasureFunction)
+        self._std_out = std_out
+
+    def _args_function(self):
+        return (self._std_out, ), {}
 
 
 def sorted_dict(dcts):
