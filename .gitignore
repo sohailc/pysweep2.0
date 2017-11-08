@@ -2,3 +2,15 @@
 .gitignore
 .idea/
 pysweep_v2.ipynb
+pysweep/.cache/
+pysweep/__pycache__/
+pysweep/docs/.ipynb_checkpoints/
+pysweep/docs/Dataset_with_pysweep-checkpoint.ipynb
+pysweep/docs/adaptive_sweep.ipynb
+pysweep/docs/basic_sweeps.ipynb
+pysweep/docs/measurement_class.ipynb
+pysweep/docs/measurement_examples.ipynb
+pysweep/docs/spyview_formatter.ipynb
+pysweep/docs/triggered_sweep.ipynb
+pysweep/tests/.cache/
+pysweep/tests/__pycache__/
