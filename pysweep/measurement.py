@@ -1,7 +1,7 @@
 from pysweep import Namespace
+from pysweep.data_storage.json import JSONStorage
+from pysweep.data_storage.spyview import SpyviewFormatter
 from pysweep.sweep_object import ChainSweep
-from pysweep.output_formatter import DictFormatter
-from pysweep.spyview import SpyviewFormatter
 
 
 class Measurement:
@@ -12,14 +12,14 @@ class Measurement:
         cls.station = station
 
     @classmethod
-    def set_default_formatter(cls, formatter_class, args, kwargs):
-        cls.formatter_class = formatter_class
-        cls.formatter_args = args
-        cls.formatter_kwargs = kwargs
+    def set_default_storage_class(cls, storage_class, args, kwargs):
+        cls.storage_class = storage_class
+        cls.storage_args = args
+        cls.storage_kwargs = kwargs
 
     @classmethod
     def get_default_formatter(cls):
-        return cls.formatter_class(*cls.formatter_args, **cls.formatter_kwargs)
+        return cls.storage_class(*cls.storage_args, **cls.storage_kwargs)
 
     @staticmethod
     def _make_list(value):
@@ -66,21 +66,21 @@ class Measurement:
         return self._output_formatter.output(*args)
 
 
-formatters = {
+storage_classes = {
     "spyview": {
-        "formatter_class": SpyviewFormatter,
+        "storage_class": SpyviewFormatter,
         "args": [],
         "kwargs": dict()
     },
     "dict": {
-        "formatter_class": DictFormatter,
+        "storage_class": JSONStorage,
         "args": [],
         "kwargs": dict(unit="replace", value="append", independent_parameter="replace")
     }
 }
 
 
-def set_default_formatter(cls="spyview"):
-    Measurement.set_default_formatter(**formatters[cls])
+def set_default_storage_class(cls="spyview"):
+    Measurement.set_default_storage_class(**storage_classes[cls])
 
-set_default_formatter()
+set_default_storage_class()
