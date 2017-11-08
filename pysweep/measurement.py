@@ -50,8 +50,8 @@ class Measurement:
         for setup_function in self._setup:
             setup_function(Measurement.station, namespace)
 
-        for log_line in self._sweep_object:
-            self._output_formatter.add(log_line)
+        for measurement_output in self._sweep_object:
+            self._output_formatter.add(measurement_output)
 
         self._output_formatter.finalize()
 
