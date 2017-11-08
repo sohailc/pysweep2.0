@@ -1,6 +1,5 @@
 from pysweep import Namespace
-from pysweep.data_storage.json import JSONStorage
-from pysweep.data_storage.spyview import SpyviewFormatter
+from pysweep.data_storage import JSONStorage, SpyviewStorage
 from pysweep.sweep_object import ChainSweep
 
 
@@ -18,7 +17,7 @@ class Measurement:
         cls.storage_kwargs = kwargs
 
     @classmethod
-    def get_default_formatter(cls):
+    def get_default_storage(cls):
         return cls.storage_class(*cls.storage_args, **cls.storage_kwargs)
 
     @staticmethod
@@ -27,12 +26,12 @@ class Measurement:
             return [value]
         return value
 
-    def __init__(self, setup, cleanup, sweep_objects, output_formatter=None):
+    def __init__(self, setup, cleanup, sweep_objects, data_storage=None):
 
         self._setup = Measurement._make_list(setup)
         self._cleanup = Measurement._make_list(cleanup)
         self._sweep_object = ChainSweep([sweep_objects])
-        self._output_formatter = output_formatter or Measurement.get_default_formatter()
+        self._data_storage = data_storage or Measurement.get_default_storage()
 
         self.name = None
         self._has_run = False
@@ -51,9 +50,9 @@ class Measurement:
             setup_function(Measurement.station, namespace)
 
         for measurement_output in self._sweep_object:
-            self._output_formatter.add(measurement_output)
+            self._data_storage.add(measurement_output)
 
-        self._output_formatter.finalize()
+        self._data_storage.finalize()
 
         for cleanup_function in self._cleanup:
             cleanup_function(Measurement.station, namespace)
@@ -63,12 +62,14 @@ class Measurement:
         return self
 
     def output(self, *args):
-        return self._output_formatter.output(*args)
+        return self._data_storage.output(*args)
 
 
+# Note: We do not include the Qcodes data storage here because the user needs to specify the data set. If the Qcodes
+# data set is required, then the user needs to create one and pass it to the init method of Measurement manually
 storage_classes = {
     "spyview": {
-        "storage_class": SpyviewFormatter,
+        "storage_class": SpyviewStorage,
         "args": [],
         "kwargs": dict()
     },

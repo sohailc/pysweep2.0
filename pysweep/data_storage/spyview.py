@@ -67,7 +67,10 @@ class SpyviewMetaWriter:
             fh.write("\n".join(property_values))
 
 
-class SpyviewFormatter(BaseStorage):
+class SpyviewStorage(BaseStorage):
+    """
+    Save measurement results as spyview files
+    """
 
     @staticmethod
     def default_file_path():
@@ -84,7 +87,7 @@ class SpyviewFormatter(BaseStorage):
         return file_path
 
     def __init__(self, delayed_parameters=None, output_file_path=None, max_buffer_size=1000):
-        self._output_file_path = output_file_path or SpyviewFormatter.default_file_path()
+        self._output_file_path = output_file_path or SpyviewStorage.default_file_path()
         self._max_buffer_size = max_buffer_size
         self._delayed_parameters = delayed_parameters or []
 
