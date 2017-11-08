@@ -1,12 +1,12 @@
 import os
-import numpy as np
 from collections import defaultdict
 
-from pysweep.output_formatter import BaseFormatter
-from pysweep.utils import DictMerge
-
+import numpy as np
 import qcodes
 import qcodes.data.location
+
+from pysweep.data_storage.base_storage import BaseStorage
+from pysweep.utils import DictMerge
 
 
 class SpyviewMetaWriter:
@@ -67,7 +67,7 @@ class SpyviewMetaWriter:
             fh.write("\n".join(property_values))
 
 
-class SpyviewFormatter(BaseFormatter):
+class SpyviewFormatter(BaseStorage):
 
     @staticmethod
     def default_file_path():

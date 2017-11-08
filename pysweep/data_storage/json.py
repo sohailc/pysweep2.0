@@ -1,18 +1,13 @@
+"""
+Initial work on the JSON storage class. Note that for now we are accumulating data in a dictionary without writing
+anything to file yet
+"""
+
+from pysweep.data_storage.base_storage import BaseStorage
 from pysweep.utils import DictMerge
 
 
-class BaseFormatter:
-    def add(self, dictionary):
-        raise NotImplementedError("Please subclass")
-
-    def output(self, *args):
-        raise NotImplementedError("Please subclass")
-
-    def finalize(self):
-        raise NotImplementedError("Please subclass")
-
-
-class DictFormatter(BaseFormatter, DictMerge):
+class JSONStorage(BaseStorage, DictMerge):
     def __init__(self, **strategy):
         super().__init__(**strategy)
         self.buffer = []
@@ -28,4 +23,4 @@ class DictFormatter(BaseFormatter, DictMerge):
         return d
 
     def finalize(self):
-        pass  # This is not needed in the dictionary formatter class
+        pass  # TODO: Left off here
