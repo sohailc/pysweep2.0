@@ -3,11 +3,16 @@ This formatter uses the native QCoDeS, SQL light based data storage class. We re
 for this to work currently
 """
 
+import warnings
+
 try:
     from qcodes.dataset.param_spec import ParamSpec
-except ImportError:
-    raise ImportError("Your QOcDeS installation does not have the data set support. Make sure that your environment "
-                      "contains the right QCoDeS branch as data set support has not been merged yet in main")
+except ModuleNotFoundError:
+    warnings.warn(
+        "Your QOcDeS installation does not have the data set support. Make sure that your environment "
+        "contains the right QCoDeS branch as data set support has not been merged yet in main. QCoDeS data "
+        "set support is unavailable"
+    )
 
 from pysweep.data_storage.base_storage import BaseStorage
 
