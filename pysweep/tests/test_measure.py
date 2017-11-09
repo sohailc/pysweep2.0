@@ -128,6 +128,7 @@ def test_simple_nested():
         out1 = measurement.output(p2.label)
         assert out1[p1.label] == {"unit": p1.unit, "value": list(sweep_values), "independent_parameter": True}
         assert out1[p2.label] == {"unit": p2.unit, "value": len(sweep_values) * [0]}
+        assert measure_main.name not in out1
 
         out2 = measurement.output(measure_main.name)
         assert out2[p1.label] == {"unit": p1.unit, "value": list(sweep_values), "independent_parameter": True}
