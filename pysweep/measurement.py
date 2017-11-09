@@ -6,15 +6,35 @@ from pysweep.sweep_object import ChainSweep
 class Measurement:
     station = None
 
+    storage_classes = {
+        "spyview": {
+            "storage_class": SpyviewStorage,
+            "args": [],
+            "kwargs": dict()
+        },
+        "json": {
+            "storage_class": JSONStorage,
+            "args": [],
+            "kwargs": dict(unit="replace", value="append", independent_parameter="replace")
+        }
+    }
+
     @classmethod
-    def attach_station(cls, station):
+    def set_station(cls, station):
         cls.station = station
 
     @classmethod
-    def set_default_storage_class(cls, storage_class, args, kwargs):
-        cls.storage_class = storage_class
-        cls.storage_args = args
-        cls.storage_kwargs = kwargs
+    def use_storage(cls, storage_class_name):
+
+        if storage_class_name not in Measurement.storage_classes:
+            available_classes = Measurement.storage_classes.keys()
+            raise ValueError("Unknown storage class {}. Available options are {}".format(storage_class_name,
+                                                                                         ",".join(available_classes)))
+        storage_specs = Measurement.storage_classes[storage_class_name]
+
+        cls.storage_class = storage_specs["storage_class"]
+        cls.storage_args = storage_specs["args"]
+        cls.storage_kwargs = storage_specs["kwargs"]
 
     @classmethod
     def get_default_storage(cls):
@@ -59,31 +79,5 @@ class Measurement:
 
         self._sweep_object.set_namespace(None)
 
-        return self
+        return self._data_storage
 
-    def output(self, *args):
-        if not self._has_run:
-            raise RuntimeError("This measurement has not run yet. Empty output")
-        return self._data_storage.output(*args)
-
-
-# Note: We do not include the Qcodes data storage here because the user needs to specify the data set. If the Qcodes
-# data set is required, then the user needs to create one and pass it to the init method of Measurement manually
-storage_classes = {
-    "spyview": {
-        "storage_class": SpyviewStorage,
-        "args": [],
-        "kwargs": dict()
-    },
-    "json": {
-        "storage_class": JSONStorage,
-        "args": [],
-        "kwargs": dict(unit="replace", value="append", independent_parameter="replace")
-    }
-}
-
-
-def set_default_storage_class(cls="spyview"):
-    Measurement.set_default_storage_class(**storage_classes[cls])
-
-set_default_storage_class()

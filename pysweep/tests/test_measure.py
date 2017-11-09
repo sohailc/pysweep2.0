@@ -1,10 +1,9 @@
 from .testing_utilities import equivalence_test
 
-import pysweep.measurement
-pysweep.measurement.set_default_storage_class("json")
-
 from pysweep.measurement import Measurement
 from pysweep import sweep
+
+Measurement.use_storage("json")
 
 
 def test_sanity():
