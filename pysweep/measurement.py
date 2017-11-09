@@ -62,6 +62,8 @@ class Measurement:
         return self
 
     def output(self, *args):
+        if not self._has_run:
+            raise RuntimeError("This measurement has not run yet. Empty output")
         return self._data_storage.output(*args)
 
 

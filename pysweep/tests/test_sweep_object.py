@@ -1,27 +1,9 @@
-from collections import OrderedDict
-import time
-
-import pysweep
-import pysweep.utils
 from pysweep.sweep_object import sweep, nested_sweep, ParameterSweep, ChainSweep
+from pysweep.tests.testing_utilities import equivalence_test
 
-from .testing_utilities import sorted_dict, StdIOMock, ParameterFactory, SweepValuesFactory, MeasurementFunctionFactory
+from .testing_utilities import sorted_dict
 
 param_log_format = ParameterSweep.parameter_log_format
-
-
-def equivalence_test(test_function, compare_function):
-
-    stdio_mock = StdIOMock()
-    args = (ParameterFactory(stdio_mock), SweepValuesFactory(), stdio_mock, MeasurementFunctionFactory(stdio_mock),
-            pysweep.Namespace())
-
-    stdio_mock.flush()
-    test_out = test_function(*args)
-    stdio_mock.flush()
-    compare_out = compare_function(*args)
-
-    assert test_out == compare_out
 
 
 def test_sanity():
