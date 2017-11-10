@@ -1,5 +1,6 @@
 import os
 from collections import defaultdict
+import tempfile
 
 import numpy as np
 import qcodes
@@ -10,11 +11,17 @@ from pysweep.utils import DictMerge
 
 
 class SpyviewMetaWriter:
-    def __init__(self, output_file_path):
+    def __init__(self, output_file_path, debug=False):
 
-        dirname, filename = os.path.split(output_file_path)
-        meta_file_name = filename.replace(".dat", ".meta.txt")
-        self._output_meta_file_path = os.path.join(dirname, meta_file_name)
+        self._debug = debug
+
+        if not debug:
+            dirname, filename = os.path.split(output_file_path)
+            meta_file_name = filename.replace(".dat", ".meta.txt")
+            self._output_meta_file_path = os.path.join(dirname, meta_file_name)
+        else:
+            self._output_meta_file_path = None
+            self._debug_output_meta_file_descriptor = tempfile.TemporaryFile()
 
         self._independent_parameters = []
         self._default_axis_properties = dict(max=0, min=np.inf, step=-1, length=1, name="")
@@ -63,8 +70,17 @@ class SpyviewMetaWriter:
         if len(self._independent_parameters) < 3:
             property_values.append("1\n0\n1\nnone")
 
-        with open(self._output_meta_file_path, "w") as fh:
-            fh.write("\n".join(property_values))
+        out = "\n".join(property_values)
+
+        if not self._debug:
+            with open(self._output_meta_file_path, "w") as fh:
+                fh.write(out)
+        else:
+            self._debug_output_meta_file_descriptor.write(out.encode())
+
+    def get_debug_output(self):
+        self._debug_output_meta_file_descriptor.seek(0)
+        return self._debug_output_meta_file_descriptor
 
 
 class SpyviewStorage(BaseStorage):
@@ -86,8 +102,7 @@ class SpyviewStorage(BaseStorage):
 
         return file_path
 
-    def __init__(self, delayed_parameters=None, output_file_path=None, output_file_handle=None,
-                 meta_file_handle=None, max_buffer_size=1000):
+    def __init__(self, delayed_parameters=None, output_file_path=None, max_buffer_size=1000, debug=False):
         """
         Parameters
         ----------
@@ -96,24 +111,28 @@ class SpyviewStorage(BaseStorage):
         output_file_path: str
             If a file name is given, this is used as output. Else a default file path is used and file names are
             incremented
-        output_file_handle: file handle
-            Alternatively a file handle can be supplied, which is very handy for testing purposes. If output_file_path
-            is not None, an value error is raise.
-        meta_file_handle: file handle
-            If we give an output file handle, we also need to supply a meta file handle. Else a value error is raised.
         max_buffer_size: int
             If the number of lines to be written to the output file exceeds this number, the buffered values will be
             written to the file system.
+        debug: bool
+            When the debug flag is True, we do not actually write anything to the file system. A temporary file
+            descriptor will be available through the get_debug_output interface. The output file path will be ignored
         """
 
-        self._output_file_path = output_file_path or SpyviewStorage.default_file_path()
+        self._debug = debug
+        if not self._debug:
+            self._output_file_path = output_file_path or SpyviewStorage.default_file_path()
+        else:
+            self._output_file_path = None
+            self._debug_output_file_path_descriptor = tempfile.TemporaryFile()
+
         self._max_buffer_size = max_buffer_size
         self._delayed_parameters = delayed_parameters or []
 
         self._buffer = dict()
         self._merger = DictMerge(unit="replace", value="append", independent_parameter="replace")
         self._inner_sweep_start_value = None
-        self._meta_writer = SpyviewMetaWriter(self._output_file_path)
+        self._meta_writer = SpyviewMetaWriter(self._output_file_path, debug=debug)
 
     def _get_buffer_size(self):
         if self._buffer == dict():
@@ -151,9 +170,13 @@ class SpyviewStorage(BaseStorage):
 
         lines = ["\t".join([str(ii) for ii in i]) for i in zip(*buffer_values)]
         lines = ["{}{}".format(*i) for i in zip(lines, escapes)]
+        out = "".join(lines)
 
-        with open(self._output_file_path, "a") as fh:
-            fh.write("".join(lines))
+        if not self._debug:
+            with open(self._output_file_path, "a") as fh:
+                fh.write(out)
+        else:
+            self._debug_output_file_path_descriptor.write(out.encode())
 
         self._meta_writer.add(self._buffer)
         self._buffer = dict()
@@ -171,4 +194,8 @@ class SpyviewStorage(BaseStorage):
 
     def output(self):
         return self._output_file_path
+
+    def get_debug_output(self):
+        self._debug_output_file_path_descriptor.seek(0)
+        return self._debug_output_file_path_descriptor, self._meta_writer.get_debug_output()
 
