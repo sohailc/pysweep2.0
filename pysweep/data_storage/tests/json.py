@@ -45,3 +45,4 @@ def test2():
 
     with pytest.raises(ValueError):
         storage.output("C")
+

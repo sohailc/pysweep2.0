@@ -86,7 +86,26 @@ class SpyviewStorage(BaseStorage):
 
         return file_path
 
-    def __init__(self, delayed_parameters=None, output_file_path=None, max_buffer_size=1000):
+    def __init__(self, delayed_parameters=None, output_file_path=None, output_file_handle=None,
+                 meta_file_handle=None, max_buffer_size=1000):
+        """
+        Parameters
+        ----------
+        delayed_parameters: list, str
+            A list of delayed parameters
+        output_file_path: str
+            If a file name is given, this is used as output. Else a default file path is used and file names are
+            incremented
+        output_file_handle: file handle
+            Alternatively a file handle can be supplied, which is very handy for testing purposes. If output_file_path
+            is not None, an value error is raise.
+        meta_file_handle: file handle
+            If we give an output file handle, we also need to supply a meta file handle. Else a value error is raised.
+        max_buffer_size: int
+            If the number of lines to be written to the output file exceeds this number, the buffered values will be
+            written to the file system.
+        """
+
         self._output_file_path = output_file_path or SpyviewStorage.default_file_path()
         self._max_buffer_size = max_buffer_size
         self._delayed_parameters = delayed_parameters or []
@@ -128,9 +147,10 @@ class SpyviewStorage(BaseStorage):
 
         block_indices = inner_sweep_values == self._inner_sweep_start_value
         escapes = [{True: "\n\n", False: "\n"}[i] for i in block_indices]
+        escapes = np.roll(escapes, -1)
 
         lines = ["\t".join([str(ii) for ii in i]) for i in zip(*buffer_values)]
-        lines = ["{}{}".format(*i) for i in zip(escapes, lines)]
+        lines = ["{}{}".format(*i) for i in zip(lines, escapes)]
 
         with open(self._output_file_path, "a") as fh:
             fh.write("".join(lines))
