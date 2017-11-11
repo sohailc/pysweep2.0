@@ -5,16 +5,17 @@ from pysweep.data_storage.spyview import SpyviewWriter, SpyviewMetaWriter
 def test():
 
     output_file = tempfile.TemporaryFile()
-    meta_output_file = tempfile.TemporaryFile()
+    meta_output_file = tempfile.TemporaryFile(mode="rb+")
 
-    def writer_function(temp_file_handle):
-        def inner(output):
-            temp_file_handle.write(output.encode())
+    def output_write_function(output):
+        output_file.write(output.encode())
 
-        return inner
+    def meta_write_function(output):
+        meta_output_file.seek(0)
+        meta_output_file.write(output.encode())
 
-    meta_writer = SpyviewMetaWriter(writer_function(meta_output_file))
-    writer = SpyviewWriter(writer_function(output_file), meta_writer)
+    meta_writer = SpyviewMetaWriter(meta_write_function)
+    writer = SpyviewWriter(output_write_function, meta_writer, max_buffer_size=10)
 
     n, m = 6, 5
 

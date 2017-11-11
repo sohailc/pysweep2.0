@@ -122,7 +122,7 @@ class SpyviewWriter:
 
         block_indices = inner_sweep_values == self._inner_sweep_start_value
         escapes = [{True: "\n\n", False: "\n"}[i] for i in block_indices]
-        escapes = np.roll(escapes, -1)
+        escapes = escapes[1:] + ['\n']
 
         lines = ["\t".join([str(ii) for ii in i]) for i in zip(*buffer_values)]
         lines = ["{}{}".format(*i) for i in zip(lines, escapes)]
