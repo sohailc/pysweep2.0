@@ -45,7 +45,6 @@ def test():
             assert next(lines) == ""
 
         for ix in range(n):
-
             iz = ix**2 + iy
             test_line = "\t".join(map(str, [ix, iy, iz]))
             assert next(lines) == test_line

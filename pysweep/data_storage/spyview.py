@@ -1,6 +1,5 @@
 import os
 from collections import defaultdict
-import tempfile
 
 import numpy as np
 import qcodes
@@ -16,7 +15,7 @@ class SpyviewMetaWriter:
         self._writer_function = writer_function
         self._independent_parameters = []
         self._default_axis_properties = dict(max=0, min=np.inf, step=-1, length=1, name="")
-        self._axis_properties = defaultdict(lambda: self._default_axis_properties)
+        self._axis_properties = defaultdict(lambda: dict(self._default_axis_properties))
 
     def add(self, spyview_buffer):
 
