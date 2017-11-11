@@ -1,13 +1,25 @@
-from pysweep.data_storage.spyview import SpyviewStorage
+import tempfile
+from pysweep.data_storage.spyview import SpyviewWriter, SpyviewMetaWriter
 
 
 def test():
-    storage = SpyviewStorage(debug=True)
+
+    output_file = tempfile.TemporaryFile()
+    meta_output_file = tempfile.TemporaryFile()
+
+    def writer_function(temp_file_handle):
+        def inner(output):
+            temp_file_handle.write(output.encode())
+
+        return inner
+
+    meta_writer = SpyviewMetaWriter(writer_function(meta_output_file))
+    writer = SpyviewWriter(writer_function(output_file), meta_writer)
 
     n, m = 6, 5
 
     x = m * list(range(n))
-    y = [i//m for i in range(m * n)]
+    y = [i//n for i in range(m * n)]
     z = [ix**2 + iy for ix, iy in zip(x, y)]
 
     x_dicts = [{"x": {"unit": "u", "value": v, "independent_parameter": True}} for v in x]
@@ -20,26 +32,27 @@ def test():
         for d in dict_list:
             merge.update(d)
 
-        storage.add(merge)
+        writer.add(merge)
 
-    storage.finalize()
-    debug_out, meta_debug_out = storage.get_debug_output()
+    writer.finalize()
+    output_file.seek(0)
 
-    lines = debug_out.read().decode().split("\n")
+    lines = output_file.read().decode().split("\n")
     lines = (l for l in lines)
 
-    for iy in range(n):
+    for iy in range(m):
         if iy > 0:
             assert next(lines) == ""
 
-        for ix in range(m):
+        for ix in range(n):
 
             iz = ix**2 + iy
             test_line = "\t".join(map(str, [ix, iy, iz]))
             assert next(lines) == test_line
 
-    meta_debug_lines = meta_debug_out.read().decode().split("\n")
-    compare = [str(i) for i in [m, min(x), max(x), "x", n, max(y), min(y), "y", 1, 0, 1, "none"]]
+    meta_output_file.seek(0)
+    meta_debug_lines = meta_output_file.read().decode().split("\n")
+    compare = [str(i) for i in [n, min(x), max(x), "x", m, max(y), min(y), "y", 1, 0, 1, "none"]]
 
     assert meta_debug_lines == compare
 
