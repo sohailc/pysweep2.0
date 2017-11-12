@@ -13,20 +13,16 @@ class SpyviewMetaWriter:
     def __init__(self, writer_function):
 
         self._writer_function = writer_function
-        self._independent_parameters = []
         self._default_axis_properties = dict(max=0, min=np.inf, step=-1, length=1, name="")
         self._axis_properties = defaultdict(lambda: dict(self._default_axis_properties))
 
-    def add(self, spyview_buffer):
-
-        if not len(self._independent_parameters):
-            self._independent_parameters = [k for k in spyview_buffer if "independent_parameter" in spyview_buffer[k]]
+    def add(self, spyview_buffer, independent_parameters):
 
         property_names = ["length", "min", "max", "name"]
         property_values = []
         update = False
         previous_axis_length = 1
-        for param in self._independent_parameters:
+        for param in independent_parameters:
 
             value = spyview_buffer[param]["value"]
             mx = max(value)
@@ -57,7 +53,7 @@ class SpyviewMetaWriter:
         if not update:
             return
 
-        if len(self._independent_parameters) < 3:
+        if len(independent_parameters) < 3:
             property_values.append("1\n0\n1\nnone")
 
         out = "\n".join(property_values)
@@ -88,6 +84,7 @@ class SpyviewWriter:
         self._buffer = dict()
         self._merger = DictMerge(unit="replace", value="append", independent_parameter="replace")
         self._inner_sweep_start_value = None
+        self._independent_parameters = []
         self._meta_writer = meta_writer
 
     def _get_buffer_size(self):
@@ -105,15 +102,34 @@ class SpyviewWriter:
             size = min([size, this_size])
         return size
 
+    def _find_independent_parameters(self):
+
+        def telescope_collapse(lst):
+            b = [lst[0]]
+
+            for l in lst[1:]:
+                if l != b[-1]:
+                    b.append(l)
+
+            return len(b)
+
+        independent_collapsed = [(k, telescope_collapse(self._buffer[k]["value"])) for k in self._buffer
+                                  if "independent_parameter" in self._buffer[k]]
+
+        s = sorted(independent_collapsed, key=lambda el: el[1], reverse=True)
+        return list(zip(*s))[0]
+
     def _write_buffer(self):
 
         # We will first write the independent parameters in the right order
-        independent_parameters = [k for k in self._buffer if "independent_parameter" in self._buffer[k]]
-        buffer_values = [self._buffer[param]["value"] for param in independent_parameters]
+        if len(self._independent_parameters) == 0:
+            self._independent_parameters = self._find_independent_parameters()
+
+        buffer_values = [self._buffer[param]["value"] for param in self._independent_parameters]
 
         # The rest of the variables
         buffer_values.extend([self._buffer[param]["value"] for param in self._buffer.keys() if param not
-                              in independent_parameters])
+                              in self._independent_parameters])
 
         inner_sweep_values = np.array(buffer_values[0])
 
@@ -129,7 +145,7 @@ class SpyviewWriter:
         out = "".join(lines)
 
         self._writer_function(out)
-        self._meta_writer.add(self._buffer)
+        self._meta_writer.add(self._buffer, self._independent_parameters)
         self._buffer = dict()
 
     def add(self, dictionary):
