@@ -10,9 +10,9 @@ def read_lines(file):
     return file.read().decode().split("\n")
 
 
-def test_1d():
-
-    max_buffer_size = 10
+@given(integers(min_value=3, max_value=700), integers(min_value=5, max_value=500))
+@settings(max_examples=30)
+def test_1d(m, max_buffer_size):
 
     output_file = tempfile.TemporaryFile()
     meta_output_file = tempfile.TemporaryFile(mode="rb+")
@@ -28,7 +28,6 @@ def test_1d():
     meta_writer = SpyviewMetaWriter(meta_write_function)
     writer = SpyviewWriter(output_write_function, meta_writer, max_buffer_size=max_buffer_size)
 
-    m = 30
     x = list(range(m))
     y = [ix ** 2 + 3 for ix in x]
 
@@ -54,6 +53,11 @@ def test_1d():
 
     for ix in range(m):
         assert next(lines) == "\t".join(map(str, [ix, 0, ix ** 2 + 3]))
+
+    meta_debug_lines = read_lines(meta_output_file)
+    compare = [str(i) for i in [m, min(x), max(x), "x", 1, 0, 0, "empty", 1, 0, 1, "none"]]
+
+    assert meta_debug_lines == compare
 
 
 @given(integers(min_value=3, max_value=7), integers(min_value=3, max_value=7), integers(min_value=5, max_value=500))

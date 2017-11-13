@@ -80,8 +80,8 @@ class SpyviewWriter:
             return 0
 
         size = np.inf
-        for p in self._buffer.values():
-            value = p["value"]
+        for key in self._buffer.keys():
+            value = self._get_buffer_value(key)
             if hasattr(value, "__len__"):
                 this_size = len(value)
             else:
