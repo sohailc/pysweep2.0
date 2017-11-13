@@ -188,7 +188,7 @@ class SpyviewStorage(BaseStorage):
             fh.write(output)
 
     def _writer_function(self, output):
-        with open(self._output_file_path, "a") as fh:
+        with open(self._output_file_path, "w") as fh:
             fh.write(output)
 
     def add(self, dictionary):

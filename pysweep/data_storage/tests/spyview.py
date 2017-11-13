@@ -1,8 +1,13 @@
+from hypothesis import given, settings
+from hypothesis.strategies import integers
+
 import tempfile
 from pysweep.data_storage.spyview import SpyviewWriter, SpyviewMetaWriter
 
 
-def test():
+@given(integers(min_value=3, max_value=7), integers(min_value=3, max_value=7), integers(min_value=5, max_value=500))
+@settings(max_examples=30)
+def test(n, m, max_buffer_size):
 
     output_file = tempfile.TemporaryFile()
     meta_output_file = tempfile.TemporaryFile(mode="rb+")
@@ -16,9 +21,7 @@ def test():
         meta_output_file.write(output.encode())
 
     meta_writer = SpyviewMetaWriter(meta_write_function)
-    writer = SpyviewWriter(output_write_function, meta_writer, max_buffer_size=10)
-
-    n, m = 6, 5
+    writer = SpyviewWriter(output_write_function, meta_writer, max_buffer_size=max_buffer_size)
 
     x = m * list(range(n))
     y = [i//n for i in range(m * n)]
@@ -58,12 +61,15 @@ def test():
     assert meta_debug_lines == compare
 
 
-def test_delayed():
+@given(integers(min_value=3, max_value=7), integers(min_value=3, max_value=7), integers(min_value=5, max_value=500))
+@settings(max_examples=30)
+def test_delayed(n, m, max_buffer_size):
 
     output_file = tempfile.TemporaryFile()
     meta_output_file = tempfile.TemporaryFile(mode="rb+")
 
     def output_write_function(output):
+        output_file.seek(0)
         output_file.write(output.encode())
 
     def meta_write_function(output):
@@ -71,9 +77,7 @@ def test_delayed():
         meta_output_file.write(output.encode())
 
     meta_writer = SpyviewMetaWriter(meta_write_function)
-    writer = SpyviewWriter(output_write_function, meta_writer, max_buffer_size=10, delayed_parameters="y")
-
-    n, m = 6, 5
+    writer = SpyviewWriter(output_write_function, meta_writer, max_buffer_size=max_buffer_size, delayed_parameters="y")
 
     x = m * list(range(n))
     y = [i//n for i in range(m * n)]
@@ -113,3 +117,4 @@ def test_delayed():
     compare = [str(i) for i in [n, min(x), max(x), "x", m, max(y), min(y), "y", 1, 0, 1, "none"]]
 
     assert meta_debug_lines == compare
+

@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name='pysweep2',
-    version='0.4',
+    version='0.5',
     description='Easily sweep QCoDeS parameters',
     license='MIT',
     author='Sohail Chatoor',
