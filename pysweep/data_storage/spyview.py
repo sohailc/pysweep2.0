@@ -13,45 +13,33 @@ class SpyviewMetaWriter:
     def __init__(self, writer_function):
 
         self._writer_function = writer_function
-        self._default_axis_properties = dict(max=0, min=np.inf, step=-1, length=1, name="")
+        self._default_axis_properties = dict(max=0, min=np.inf, step=0, length=1, name="")
         self._axis_properties = defaultdict(lambda: dict(self._default_axis_properties))
 
     def add(self, spyview_buffer, independent_parameters):
 
         property_names = ["length", "min", "max", "name"]
         property_values = []
-        update = False
-        previous_axis_length = 1
+
         for param in independent_parameters:
 
-            value = spyview_buffer[param]["value"]
-            mx = max(value)
-            mn = min(value)
+            value = sorted(set(spyview_buffer[param]["value"]))
+            mn = value[0]
+            mx = value[-1]
 
-            if self._axis_properties[param]["max"] < mx:
-                self._axis_properties[param]["max"] = mx
-                update = True
-            else:
-                mx = self._axis_properties[param]["max"]
-
-            if self._axis_properties[param]["min"] > mn:
-                self._axis_properties[param]["min"] = mn
-                update = True
-            else:
-                mn = self._axis_properties[param]["min"]
-
-            self._axis_properties[param]["step"] = value[previous_axis_length] - value[0]
             self._axis_properties[param]["name"] = param
+            self._axis_properties[param]["max"] = mx
+            self._axis_properties[param]["min"] = mn
 
-            self._axis_properties[param]["length"] = int((mx - mn) / self._axis_properties[param]["step"]) + 1
-            previous_axis_length = self._axis_properties[param]["length"]
+            if len(value) > 1:
+                self._axis_properties[param]["step"] = value[1] - mn
+                self._axis_properties[param]["length"] = int((mx - mn) / self._axis_properties[param]["step"]) + 1
+            else:
+                self._axis_properties[param]["length"] = 1
 
             s = "\n".join(str(self._axis_properties[param][k]) for k in property_names)
             property_values.append(s)
             property_names = ["length", "max", "min", "name"]
-
-        if not update:
-            return
 
         if len(independent_parameters) < 3:
             property_values.append("1\n0\n1\nnone")
@@ -124,6 +112,7 @@ class SpyviewWriter:
         # We will first write the independent parameters in the right order
         if len(self._independent_parameters) == 0:
             self._independent_parameters = self._find_independent_parameters()
+            first_write = True
 
         buffer_values = [self._buffer[param]["value"] for param in self._independent_parameters]
 
@@ -137,16 +126,16 @@ class SpyviewWriter:
             self._inner_sweep_start_value = inner_sweep_values[0]
 
         block_indices = inner_sweep_values == self._inner_sweep_start_value
+
         escapes = [{True: "\n\n", False: "\n"}[i] for i in block_indices]
-        escapes = escapes[1:] + ['\n']
+        escapes[0] = ""
 
         lines = ["\t".join([str(ii) for ii in i]) for i in zip(*buffer_values)]
-        lines = ["{}{}".format(*i) for i in zip(lines, escapes)]
+        lines = ["{}{}".format(*i) for i in zip(escapes, lines)]
         out = "".join(lines)
 
         self._writer_function(out)
         self._meta_writer.add(self._buffer, self._independent_parameters)
-        self._buffer = dict()
 
     def add(self, dictionary):
         delayed_params_buffer = {param: {"value": []} for param in self._delayed_parameters}
@@ -184,7 +173,7 @@ class SpyviewStorage(BaseStorage):
     def __init__(self, output_file_path=None, delayed_parameters=None, max_buffer_size=1000):
 
         self._output_file_path = output_file_path or SpyviewStorage.default_file_path()
-        self._output_meta_file_path = SpyviewStorage.default_meta_file_path(self._output_meta_file_path)
+        self._output_meta_file_path = SpyviewStorage.default_meta_file_path(self._output_file_path)
 
         self._meta_writer = SpyviewMetaWriter(self._meta_writer_function)
         self._writer = SpyviewWriter(
