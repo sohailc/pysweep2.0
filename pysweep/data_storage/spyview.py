@@ -190,6 +190,7 @@ class SpyviewStorage(BaseStorage):
 
         self._output_file_path = output_file_path or SpyviewStorage.default_file_path()
         self._output_meta_file_path = SpyviewStorage.default_meta_file_path(self._output_file_path)
+        self._max_buffer_size = max_buffer_size
         self._debug = debug
 
         self._meta_writer = SpyviewMetaWriter(self._meta_writer_function)
@@ -213,6 +214,9 @@ class SpyviewStorage(BaseStorage):
 
         with open(self._output_file_path, "w") as fh:
             fh.write(output)
+
+    def output_files(self):
+        return self._output_file_path, self._output_meta_file_path
 
     def add(self, dictionary):
         self._writer.add(dictionary)
