@@ -101,20 +101,33 @@ class SpyviewWriter:
 
             return len(b)
 
-        independent_collapsed = [(k, telescope_collapse(self._buffer[k]["value"])) for k in self._buffer
+        independent_collapsed = [[k, telescope_collapse(self._buffer[k]["value"])] for k in self._buffer
                                   if "independent_parameter" in self._buffer[k]]
 
         s = sorted(independent_collapsed, key=lambda el: el[1], reverse=True)
         return list(zip(*s))[0]
+
+    def _get_buffer_value(self, key):
+
+        if key == "empty":
+            first_independent_parameter = self._independent_parameters[0]
+            self._buffer["empty"] = {"value": [0] * len(self._buffer[first_independent_parameter]["value"])}
+
+        return self._buffer[key]["value"]
 
     def _write_buffer(self):
 
         # We will first write the independent parameters in the right order
         if len(self._independent_parameters) == 0:
             self._independent_parameters = self._find_independent_parameters()
-            first_write = True
 
-        buffer_values = [self._buffer[param]["value"] for param in self._independent_parameters]
+            if len(self._independent_parameters) == 0:
+                raise ValueError("At least one independent parameter needed")
+
+            if len(self._independent_parameters) == 1:
+                self._independent_parameters += ("empty",)
+
+        buffer_values = [self._get_buffer_value(param) for param in self._independent_parameters]
 
         # The rest of the variables
         buffer_values.extend([self._buffer[param]["value"] for param in self._buffer.keys() if param not
