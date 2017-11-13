@@ -24,7 +24,7 @@ class Measurement:
         cls.station = station
 
     @classmethod
-    def use_storage(cls, storage_class_name):
+    def use_storage(cls, storage_class_name, **kwargs):
 
         if storage_class_name not in Measurement.storage_classes:
             available_classes = Measurement.storage_classes.keys()
@@ -36,9 +36,17 @@ class Measurement:
         cls.storage_args = storage_specs["args"]
         cls.storage_kwargs = storage_specs["kwargs"]
 
+        for kwarg, value in kwargs.items():  # Override with user specified kwarg
+            cls.storage_kwargs[kwarg] = value
+
     @classmethod
-    def get_default_storage(cls):
-        return cls.storage_class(*cls.storage_args, **cls.storage_kwargs)
+    def get_default_storage(cls, **user_kwargs):
+
+        storage_kwargs = dict(cls.storage_kwargs)
+        for kwarg, value in user_kwargs.items():  # Override with user specified kwarg
+            storage_kwargs[kwarg] = value
+
+        return cls.storage_class(*cls.storage_args, **storage_kwargs)
 
     @staticmethod
     def _make_list(value):
@@ -51,12 +59,14 @@ class Measurement:
         self._setup = Measurement._make_list(setup)
         self._cleanup = Measurement._make_list(cleanup)
         self._sweep_object = ChainSweep([sweep_objects])
-        self._data_storage = data_storage or Measurement.get_default_storage()
+        self._data_storage = data_storage
 
         self.name = None
         self._has_run = False
 
-    def run(self):
+    def run(self, **storage_kwargs):
+
+        self._data_storage = self._data_storage or Measurement.get_default_storage(**storage_kwargs)
 
         if self._has_run:
             raise RuntimeError("This measurement has already run. Running twice is disallowed")

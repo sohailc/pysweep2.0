@@ -141,12 +141,15 @@ class SpyviewWriter:
         delayed_params_buffer = {param: {"value": []} for param in self._delayed_parameters}
 
         self._buffer = self._merger.merge([dictionary, delayed_params_buffer, self._buffer])
-        if self._get_buffer_size() >= self._max_buffer_size:
+        buffer_size = self._get_buffer_size()
+        if buffer_size and buffer_size % self._max_buffer_size == 0:
             self._write_buffer()
 
     def finalize(self):
-        if self._get_buffer_size() >= 2:
-            self._write_buffer()
+        self._write_buffer()
+
+    def get_buffer(self):
+        return self._buffer
 
 
 class SpyviewStorage(BaseStorage):
@@ -170,10 +173,11 @@ class SpyviewStorage(BaseStorage):
         meta_file_name = filename.replace(".dat", ".meta.txt")
         return os.path.join(dirname, meta_file_name)
 
-    def __init__(self, output_file_path=None, delayed_parameters=None, max_buffer_size=1000):
+    def __init__(self, output_file_path=None, delayed_parameters=None, max_buffer_size=10, debug=False):
 
         self._output_file_path = output_file_path or SpyviewStorage.default_file_path()
         self._output_meta_file_path = SpyviewStorage.default_meta_file_path(self._output_file_path)
+        self._debug = debug
 
         self._meta_writer = SpyviewMetaWriter(self._meta_writer_function)
         self._writer = SpyviewWriter(
@@ -184,10 +188,16 @@ class SpyviewStorage(BaseStorage):
         )
 
     def _meta_writer_function(self, output):
+        if self._debug:
+            return
+
         with open(self._output_meta_file_path, "w") as fh:
             fh.write(output)
 
     def _writer_function(self, output):
+        if self._debug:
+            return
+
         with open(self._output_file_path, "w") as fh:
             fh.write(output)
 
@@ -195,7 +205,7 @@ class SpyviewStorage(BaseStorage):
         self._writer.add(dictionary)
 
     def output(self):
-        return self._output_file_path
+        return self._writer.get_buffer()
 
     def finalize(self):
         self._writer.finalize()

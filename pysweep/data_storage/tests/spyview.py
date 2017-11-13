@@ -5,6 +5,11 @@ import tempfile
 from pysweep.data_storage.spyview import SpyviewWriter, SpyviewMetaWriter
 
 
+def read_lines(file):
+    file.seek(0)
+    return file.read().decode().split("\n")
+
+
 @given(integers(min_value=3, max_value=7), integers(min_value=3, max_value=7), integers(min_value=5, max_value=500))
 @settings(max_examples=30)
 def test(n, m, max_buffer_size):
@@ -31,6 +36,7 @@ def test(n, m, max_buffer_size):
     y_dicts = [{"y": {"unit": "v", "value": v, "independent_parameter": True}} for v in y]
     z_dicts = [{"z": {"unit": "w", "value": v}} for v in z]
 
+    write_count = 0
     for dict_list in zip(x_dicts, y_dicts, z_dicts):
 
         merge = {}
@@ -38,11 +44,12 @@ def test(n, m, max_buffer_size):
             merge.update(d)
 
         writer.add(merge)
+        write_count += 1
+        assert len([l for l in read_lines(output_file) if l != ""]) == max_buffer_size * (write_count // max_buffer_size)
 
     writer.finalize()
-    output_file.seek(0)
 
-    lines = output_file.read().decode().split("\n")
+    lines = read_lines(output_file)
     lines = (l for l in lines)
 
     for iy in range(m):
@@ -54,8 +61,7 @@ def test(n, m, max_buffer_size):
             test_line = "\t".join(map(str, [ix, iy, iz]))
             assert next(lines) == test_line
 
-    meta_output_file.seek(0)
-    meta_debug_lines = meta_output_file.read().decode().split("\n")
+    meta_debug_lines = read_lines(meta_output_file)
     compare = [str(i) for i in [n, min(x), max(x), "x", m, max(y), min(y), "y", 1, 0, 1, "none"]]
 
     assert meta_debug_lines == compare
@@ -98,9 +104,8 @@ def test_delayed(n, m, max_buffer_size):
     writer.add(y_dicts)
 
     writer.finalize()
-    output_file.seek(0)
 
-    lines = output_file.read().decode().split("\n")
+    lines = read_lines(output_file)
     lines = (l for l in lines)
 
     for iy in range(m):
@@ -112,8 +117,7 @@ def test_delayed(n, m, max_buffer_size):
             test_line = "\t".join(map(str, [ix, iy, iz]))
             assert next(lines) == test_line
 
-    meta_output_file.seek(0)
-    meta_debug_lines = meta_output_file.read().decode().split("\n")
+    meta_debug_lines = read_lines(meta_output_file)
     compare = [str(i) for i in [n, min(x), max(x), "x", m, max(y), min(y), "y", 1, 0, 1, "none"]]
 
     assert meta_debug_lines == compare
