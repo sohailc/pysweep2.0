@@ -8,6 +8,7 @@ def test():
     meta_output_file = tempfile.TemporaryFile(mode="rb+")
 
     def output_write_function(output):
+        output_file.seek(0)
         output_file.write(output.encode())
 
     def meta_write_function(output):
