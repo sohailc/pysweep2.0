@@ -137,6 +137,9 @@ def test_delayed(n, m, max_buffer_size):
         meta_output_file.seek(0)
         meta_output_file.write(output.encode())
 
+    def get_y_dict():
+        return {"y": {"unit": "v", "value": [], "independent_parameter": True}}
+
     meta_writer = SpyviewMetaWriter(meta_write_function)
     writer = SpyviewWriter(output_write_function, meta_writer, max_buffer_size=max_buffer_size, delayed_parameters="y")
 
@@ -146,18 +149,22 @@ def test_delayed(n, m, max_buffer_size):
 
     x_dicts = [{"x": {"unit": "u", "value": v, "independent_parameter": True}} for v in x]
     z_dicts = [{"z": {"unit": "w", "value": v}} for v in z]
+    y_dict = get_y_dict()
 
-    for dict_list in zip(x_dicts, z_dicts):
+    for count, (x_dict, iy, z_dict) in enumerate(zip(x_dicts, y, z_dicts)):
 
         merge = {}
-        for d in dict_list:
+        for d in [x_dict, z_dict]:
             merge.update(d)
+
+        y_dict["y"]["value"].append(iy)
+        if count != 0 and count % (n * m // 2) == 0:
+            merge.update(y_dict)
+            y_dict = get_y_dict()
 
         writer.add(merge)
 
-    y_dicts = {"y": {"unit": "v", "value": y, "independent_parameter": True}}
-    writer.add(y_dicts)
-
+    writer.add(y_dict)
     writer.finalize()
 
     lines = read_lines(output_file)

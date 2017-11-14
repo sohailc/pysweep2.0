@@ -92,16 +92,11 @@ class SpyviewWriter:
 
     def _find_independent_parameters(self):
 
-        def telescope_collapse(lst):
-            b = [lst[0]]
+        def collapse(lst):
+            ary = np.array(lst)
+            return np.sum(ary != np.roll(ary, -1))
 
-            for l in lst[1:]:
-                if l != b[-1]:
-                    b.append(l)
-
-            return len(b)
-
-        independent_collapsed = [[k, telescope_collapse(self._buffer[k]["value"])] for k in self._buffer
+        independent_collapsed = [[k, collapse(self._buffer[k]["value"])] for k in self._buffer
                                   if "independent_parameter" in self._buffer[k]]
 
         s = sorted(independent_collapsed, key=lambda el: el[1], reverse=True)
