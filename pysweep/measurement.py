@@ -79,6 +79,8 @@ class Measurement:
         for setup_function in self._setup:
             setup_function(Measurement.station, namespace)
 
+        self._data_storage.save_json_snapshot(self.station.snapshot())
+
         for measurement_output in self._sweep_object:
             self._data_storage.add(measurement_output)
 

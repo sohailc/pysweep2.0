@@ -1,3 +1,4 @@
+import json
 import os
 from collections import defaultdict
 
@@ -161,6 +162,7 @@ class SpyviewWriter:
 
 
 class SpyviewStorage(BaseStorage):
+
     @staticmethod
     def default_file_path():
         io = qcodes.DiskIO('.')
@@ -185,6 +187,9 @@ class SpyviewStorage(BaseStorage):
 
         self._output_file_path = output_file_path or SpyviewStorage.default_file_path()
         self._output_meta_file_path = SpyviewStorage.default_meta_file_path(self._output_file_path)
+
+        self._data_folder, _ = os.path.split(self._output_file_path)
+
         self._max_buffer_size = max_buffer_size
         self._debug = debug
 
@@ -221,6 +226,12 @@ class SpyviewStorage(BaseStorage):
 
     def finalize(self):
         self._writer.finalize()
+
+    def save_json_snapshot(self, snapshot):
+
+        json_file = os.path.join(self._data_folder, "station_snapshot.json")
+        with open(json_file, 'w') as meta_file:
+            json.dump(snapshot, meta_file, sort_keys=True, indent=4, ensure_ascii=False)
 
 
 

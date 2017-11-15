@@ -12,6 +12,7 @@ class JSONStorage(BaseStorage, DictMerge):
         super().__init__(**strategy)
         self.buffer = []
         self._unique_names = set()
+        self.snapshot = None
 
     def add(self, dictionary):
 
@@ -36,3 +37,6 @@ class JSONStorage(BaseStorage, DictMerge):
 
     def finalize(self):
         pass  # TODO: Left off here
+
+    def save_json_snapshot(self, snapshot):
+        self.snapshot = snapshot
