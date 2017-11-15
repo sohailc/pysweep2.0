@@ -9,9 +9,6 @@ def read_lines(file):
     file.seek(0)
     return file.read().decode().split("\n")
 
-def test_storage():
-    pass
-
 
 @given(integers(min_value=3, max_value=700), integers(min_value=5, max_value=500))
 @settings(max_examples=30)
