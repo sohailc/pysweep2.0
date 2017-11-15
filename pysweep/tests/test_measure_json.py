@@ -1,9 +1,13 @@
+from qcodes import Station
+
 from .testing_utilities import equivalence_test
 
 from pysweep.measurement import Measurement
 from pysweep import sweep
 
 Measurement.use_storage("json")
+station = Station()
+Measurement.set_station(station)
 
 
 def test_sanity():
