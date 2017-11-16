@@ -25,6 +25,6 @@ class Powersource(qcodes.Instrument):
 def test():
     pwr = Powersource("pwr")
 
-    gate = alias(pwr.voltage, new_label="gate voltage", new_name="gate", new_unit="V", conversion_factor=1E-3)
+    gate = alias(pwr.voltage, new_label="gate voltage", new_name="gate", new_unit="V", conversion_factor=1E3)
     gate(3)  # Set at 3 V
     print(gate())
