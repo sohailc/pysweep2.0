@@ -48,6 +48,23 @@ def test():
     assert alias_metadata["mapping"] == str(mapping)
 
 
+def test_mappings():
+    assert LinearMapping("milli to unit").conversion_factor == 1E-3 / 1
+    assert LinearMapping("unit to milli").conversion_factor == 1 / 1E-3
+    assert LinearMapping("mega to nano").conversion_factor == 1E6 / 1E-9
+    assert LinearMapping("kilo to giga").conversion_factor == 1E3 / 1E9
+
+    assert LinearMapping("milli to unit")(1) == 1E3
+    assert LinearMapping("unit to milli")(1) == 1E-3
+    assert LinearMapping("mega to nano")(1) == 1E-9 / 1E6
+    assert LinearMapping("kilo to giga")(1) == 1E9 / 1E3
+
+    assert LinearMapping("milli to unit").inverse(1) == 1E-3
+    assert LinearMapping("unit to milli").inverse(1) == 1E3
+    assert LinearMapping("mega to nano").inverse(1) == 1E6 / 1E-9
+    assert LinearMapping("kilo to giga").inverse(1) == 1E3 / 1E9
+
+
 def test_free_floating_param():
 
     class GetterSetter:
