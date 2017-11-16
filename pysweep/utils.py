@@ -1,8 +1,6 @@
-import copy
 import time
 from collections import defaultdict
 
-from qcodes import StandardParameter
 
 def sleep(t):
     def inner(station, namespace):
@@ -56,23 +54,5 @@ class DictMerge:
         for d in dicts[1:]:
             result = self._merge_two(result, dict(d))
         return result
-
-
-def alias(parameter, new_label=None, new_name=None, new_unit=None, conversion_factor=None):
-
-    new_label = new_label or parameter.label
-    new_name = new_name or parameter.name
-    new_unit = new_unit or parameter.unit
-
-    new_parameter = StandardParameter(
-        name=new_name,
-        instrument=parameter._instrument,
-        label=new_label,
-        unit=new_unit,
-        set_cmd=lambda value: parameter(conversion_factor * value),
-        get_cmd=lambda: parameter() / conversion_factor
-    )
-
-    return new_parameter
 
 
