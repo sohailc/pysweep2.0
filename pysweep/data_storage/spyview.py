@@ -123,12 +123,10 @@ class SpyviewWriter:
             if len(self._independent_parameters) == 1:
                 self._independent_parameters += ("empty",)
 
-        buffer_values = [self._get_buffer_value(param) for param in self._independent_parameters]
+        all_parameters = list(self._independent_parameters)
+        all_parameters.extend([param for param in self._buffer.keys() if param not in self._independent_parameters])
 
-        # The rest of the variables
-        buffer_values.extend([self._buffer[param]["value"] for param in self._buffer.keys() if param not
-                              in self._independent_parameters])
-
+        buffer_values = [self._get_buffer_value(param) for param in all_parameters]
         inner_sweep_values = np.array(buffer_values[0])
 
         if self._inner_sweep_start_value is None:
