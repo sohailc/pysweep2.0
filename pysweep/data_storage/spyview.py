@@ -189,15 +189,21 @@ class SpyviewStorage(BaseStorage):
         return file_path
 
     @staticmethod
-    def default_meta_file_path(output_file_path):
+    def meta_file_path(output_file_path):
         dirname, filename = os.path.split(output_file_path)
         meta_file_name = filename.replace(".dat", ".meta.txt")
         return os.path.join(dirname, meta_file_name)
 
+    @staticmethod
+    def snapshot_file_path(output_file_path):
+        dirname, filename = os.path.split(output_file_path)
+        json_file_name = filename.replace(".dat", ".station_snapshot.json")
+        return os.path.join(dirname, json_file_name)
+
     def __init__(self, output_file_path=None, delayed_parameters=None, max_buffer_size=10, debug=False):
 
         self._output_file_path = output_file_path or SpyviewStorage.default_file_path()
-        self._output_meta_file_path = SpyviewStorage.default_meta_file_path(self._output_file_path)
+        self._output_meta_file_path = SpyviewStorage.meta_file_path(self._output_file_path)
 
         self._data_folder, _ = os.path.split(self._output_file_path)
 
@@ -240,7 +246,7 @@ class SpyviewStorage(BaseStorage):
 
     def save_json_snapshot(self, snapshot):
 
-        json_file = os.path.join(self._data_folder, "station_snapshot.json")
+        json_file = SpyviewStorage.snapshot_file_path(self._output_file_path)
         with open(json_file, 'w') as meta_file:
             json.dump(snapshot, meta_file, sort_keys=True, indent=4, ensure_ascii=False)
 
