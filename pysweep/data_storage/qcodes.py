@@ -60,3 +60,6 @@ class QcodesStorage(BaseStorage):
 
     def finalize(self):
         pass
+
+    def save_json_snapshot(self, snapshot):
+        pass  # TODO:  FIX THIS ASAP

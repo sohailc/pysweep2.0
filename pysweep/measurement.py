@@ -6,19 +6,47 @@ from pysweep.sweep_object import ChainSweep
 class Measurement:
     station = None
 
+    storage_classes = {
+        "spyview": {
+            "storage_class": SpyviewStorage,
+            "args": [],
+            "kwargs": dict()
+        },
+        "json": {
+            "storage_class": JSONStorage,
+            "args": [],
+            "kwargs": dict(unit="replace", value="append", independent_parameter="replace")
+        }
+    }
+
     @classmethod
-    def attach_station(cls, station):
+    def set_station(cls, station):
         cls.station = station
 
     @classmethod
-    def set_default_storage_class(cls, storage_class, args, kwargs):
-        cls.storage_class = storage_class
-        cls.storage_args = args
-        cls.storage_kwargs = kwargs
+    def use_storage(cls, storage_class_name, **kwargs):
+
+        if storage_class_name not in Measurement.storage_classes:
+            available_classes = Measurement.storage_classes.keys()
+            raise ValueError("Unknown storage class {}. Available options are {}".format(storage_class_name,
+                                                                                         ",".join(available_classes)))
+        storage_specs = Measurement.storage_classes[storage_class_name]
+
+        cls.storage_class = storage_specs["storage_class"]
+        cls.storage_args = storage_specs["args"]
+        cls.storage_kwargs = storage_specs["kwargs"]
+
+        for kwarg, value in kwargs.items():  # Override with user specified kwarg
+            cls.storage_kwargs[kwarg] = value
 
     @classmethod
-    def get_default_storage(cls):
-        return cls.storage_class(*cls.storage_args, **cls.storage_kwargs)
+    def get_default_storage(cls, **user_kwargs):
+
+        storage_kwargs = dict(cls.storage_kwargs)
+        for kwarg, value in user_kwargs.items():  # Override with user specified kwarg
+            storage_kwargs[kwarg] = value
+
+        return cls.storage_class(*cls.storage_args, **storage_kwargs)
 
     @staticmethod
     def _make_list(value):
@@ -31,12 +59,14 @@ class Measurement:
         self._setup = Measurement._make_list(setup)
         self._cleanup = Measurement._make_list(cleanup)
         self._sweep_object = ChainSweep([sweep_objects])
-        self._data_storage = data_storage or Measurement.get_default_storage()
+        self._data_storage = data_storage
 
         self.name = None
         self._has_run = False
 
-    def run(self):
+    def run(self, **storage_kwargs):
+
+        self._data_storage = self._data_storage or Measurement.get_default_storage(**storage_kwargs)
 
         if self._has_run:
             raise RuntimeError("This measurement has already run. Running twice is disallowed")
@@ -49,6 +79,8 @@ class Measurement:
         for setup_function in self._setup:
             setup_function(Measurement.station, namespace)
 
+        self._data_storage.save_json_snapshot(self.station.snapshot())
+
         for measurement_output in self._sweep_object:
             self._data_storage.add(measurement_output)
 
@@ -59,29 +91,5 @@ class Measurement:
 
         self._sweep_object.set_namespace(None)
 
-        return self
+        return self._data_storage
 
-    def output(self, *args):
-        return self._data_storage.output(*args)
-
-
-# Note: We do not include the Qcodes data storage here because the user needs to specify the data set. If the Qcodes
-# data set is required, then the user needs to create one and pass it to the init method of Measurement manually
-storage_classes = {
-    "spyview": {
-        "storage_class": SpyviewStorage,
-        "args": [],
-        "kwargs": dict()
-    },
-    "dict": {
-        "storage_class": JSONStorage,
-        "args": [],
-        "kwargs": dict(unit="replace", value="append", independent_parameter="replace")
-    }
-}
-
-
-def set_default_storage_class(cls="spyview"):
-    Measurement.set_default_storage_class(**storage_classes[cls])
-
-set_default_storage_class()

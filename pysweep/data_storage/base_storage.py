@@ -12,3 +12,6 @@ class BaseStorage:
 
     def finalize(self):
         raise NotImplementedError("Please subclass")
+
+    def save_json_snapshot(self, snapshot):
+        raise NotImplementedError("Please subclass")

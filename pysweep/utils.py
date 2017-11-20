@@ -52,5 +52,7 @@ class DictMerge:
     def merge(self, dicts):
         result = dict(dicts[0])
         for d in dicts[1:]:
-            result = self._merge_two(result, d)
+            result = self._merge_two(result, dict(d))
         return result
+
+

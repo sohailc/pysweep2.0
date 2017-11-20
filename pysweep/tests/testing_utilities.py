@@ -3,6 +3,8 @@ import numpy as np
 
 import qcodes
 
+import pysweep
+
 
 class StdIOMock:
     def __init__(self):
@@ -19,12 +21,20 @@ class StdIOMock:
 
 
 class MeasureFunction:
-    name = 0
+    serial_number = 0
+
+    @classmethod
+    def reset_serial_number(cls):
+        cls.serial_number = 0
 
     def __init__(self, stdio):
         self._stdio = stdio
-        self._name = str(MeasureFunction.name)
-        MeasureFunction.name += 1
+        self._name = "measurement_{}".format(MeasureFunction.serial_number)
+        MeasureFunction.serial_number += 1
+
+    @property
+    def name(self):
+        return self._name
 
     def __call__(self, station, namespace):
         hs = hash(str(self._stdio))
@@ -33,8 +43,8 @@ class MeasureFunction:
         else:
             namespace.measurement.append(hs)
 
-        self._stdio.write("measurement {} returns {}".format(hs, self._name))
-        return OrderedDict({"measurement_{}".format(self._name): hs})
+        self._stdio.write("{} returns {}".format(hs, self._name))
+        return OrderedDict({self._name: {"unit": "hash", "value": hs}})
 
 
 class BaseObjectFactory:
@@ -116,3 +126,18 @@ def sorted_dict(dcts):
         d.update(OrderedDict(sorted(dct.items(), key=lambda t: t[0])))
 
     return d
+
+
+def equivalence_test(test_function, compare_function):
+
+    stdio_mock = StdIOMock()
+    args = (ParameterFactory(stdio_mock), SweepValuesFactory(), stdio_mock, MeasurementFunctionFactory(stdio_mock),
+            pysweep.Namespace())
+
+    stdio_mock.flush()
+    MeasureFunction.reset_serial_number()
+    test_out = test_function(*args)
+    stdio_mock.flush()
+    compare_out = compare_function(*args)
+
+    assert test_out == compare_out

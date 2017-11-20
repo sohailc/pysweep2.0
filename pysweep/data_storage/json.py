@@ -11,16 +11,32 @@ class JSONStorage(BaseStorage, DictMerge):
     def __init__(self, **strategy):
         super().__init__(**strategy)
         self.buffer = []
+        self._unique_names = set()
+        self.snapshot = None
 
     def add(self, dictionary):
+
+        for key in dictionary.keys():
+            self._unique_names.add(key)
+
         self.buffer.append(dictionary)
 
     def output(self, name):
+
+        if name not in self._unique_names:
+            raise ValueError("Parameter {} unknown".format(name))
+
         d = dict()
         for ibuffer in self.buffer:
             if name in ibuffer:
                 d = self.merge([ibuffer, d])
         return d
 
+    def keys(self):
+        return list(self._unique_names)
+
     def finalize(self):
         pass  # TODO: Left off here
+
+    def save_json_snapshot(self, snapshot):
+        self.snapshot = snapshot
