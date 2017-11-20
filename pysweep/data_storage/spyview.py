@@ -16,34 +16,37 @@ class SpyviewMetaWriter:
         self._writer_function = writer_function
         self._default_axis_properties = dict(max=0, min=np.inf, step=0, length=1, name="")
         self._axis_properties = defaultdict(lambda: dict(self._default_axis_properties))
+        self._axis_properties["none"] = dict(max=0, min=1, step=0, length=1, name="none")
 
-    def add(self, spyview_buffer, independent_parameters):
+    def _update_axis_properties(self, parameter_name, parameters_values):
+        mn = parameters_values[0]
+        mx = parameters_values[-1]
+
+        self._axis_properties[parameter_name]["name"] = parameter_name
+        self._axis_properties[parameter_name]["max"] = mx
+        self._axis_properties[parameter_name]["min"] = mn
+
+        if len(parameters_values) > 1:
+            self._axis_properties[parameter_name]["step"] = parameters_values[1] - mn
+            self._axis_properties[parameter_name]["length"] = int(
+                (mx - mn) / self._axis_properties[parameter_name]["step"]) + 1
+        else:
+            self._axis_properties[parameter_name]["length"] = 1
+
+    def add(self, spyview_buffer, parameters):
 
         property_names = ["length", "min", "max", "name"]
         property_values = []
 
-        for param in independent_parameters:
+        for param in parameters:
 
-            value = sorted(set(spyview_buffer[param]["value"]))
-            mn = value[0]
-            mx = value[-1]
-
-            self._axis_properties[param]["name"] = param
-            self._axis_properties[param]["max"] = mx
-            self._axis_properties[param]["min"] = mn
-
-            if len(value) > 1:
-                self._axis_properties[param]["step"] = value[1] - mn
-                self._axis_properties[param]["length"] = int((mx - mn) / self._axis_properties[param]["step"]) + 1
-            else:
-                self._axis_properties[param]["length"] = 1
+            if param != "none":
+                value = sorted(set(spyview_buffer[param]["value"]))
+                self._update_axis_properties(param, value)
 
             s = "\n".join(str(self._axis_properties[param][k]) for k in property_names)
             property_values.append(s)
             property_names = ["length", "max", "min", "name"]
-
-        if len(independent_parameters) < 3:
-            property_values.append("1\n0\n1\nnone")
 
         out = "\n".join(property_values)
         self._writer_function(out)
@@ -123,10 +126,13 @@ class SpyviewWriter:
             if len(self._independent_parameters) == 1:
                 self._independent_parameters += ("empty",)
 
+            if len(self._independent_parameters) == 2:
+                self._independent_parameters += ("none",)
+
         all_parameters = list(self._independent_parameters)
         all_parameters.extend([param for param in self._buffer.keys() if param not in self._independent_parameters])
 
-        buffer_values = [self._get_buffer_value(param) for param in all_parameters]
+        buffer_values = [self._get_buffer_value(param) for param in all_parameters if param != "none"]
         inner_sweep_values = np.array(buffer_values[0])
 
         if self._inner_sweep_start_value is None:
