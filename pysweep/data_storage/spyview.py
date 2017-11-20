@@ -38,15 +38,19 @@ class SpyviewMetaWriter:
         property_names = ["length", "min", "max", "name"]
         property_values = []
 
-        for param in parameters:
+        for column_nr, param in enumerate(parameters):
 
-            if param != "none":
-                value = sorted(set(spyview_buffer[param]["value"]))
-                self._update_axis_properties(param, value)
+            if param == "none" or "independent_parameter" in spyview_buffer[param]:
+                if param != "none":
+                    value = sorted(set(spyview_buffer[param]["value"]))
+                    self._update_axis_properties(param, value)
 
-            s = "\n".join(str(self._axis_properties[param][k]) for k in property_names)
-            property_values.append(s)
-            property_names = ["length", "max", "min", "name"]
+                s = "\n".join(str(self._axis_properties[param][k]) for k in property_names)
+                property_values.append(s)
+                property_names = ["length", "max", "min", "name"]
+            else:
+                s = "\n".join([str(column_nr + 1), param])
+                property_values.append(s)
 
         out = "\n".join(property_values)
         self._writer_function(out)
@@ -110,7 +114,10 @@ class SpyviewWriter:
 
         if key == "empty":
             first_independent_parameter = self._independent_parameters[0]
-            self._buffer["empty"] = {"value": [0] * len(self._buffer[first_independent_parameter]["value"])}
+            self._buffer["empty"] = {
+                "value": [0] * len(self._buffer[first_independent_parameter]["value"]),
+                "independent_parameter": True
+            }
 
         return self._buffer[key]["value"]
 
@@ -148,7 +155,7 @@ class SpyviewWriter:
         out = "".join(lines)
 
         self._writer_function(out)
-        self._meta_writer.add(self._buffer, self._independent_parameters)
+        self._meta_writer.add(self._buffer, all_parameters)
 
     def add(self, dictionary):
         delayed_params_buffer = {param: {"value": []} for param in self._delayed_parameters}

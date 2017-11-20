@@ -56,6 +56,7 @@ def test_1d(m, max_buffer_size):
 
     meta_debug_lines = read_lines(meta_output_file)
     compare = [str(i) for i in [m, min(x), max(x), "x", 1, 0, 0, "empty", 1, 0, 1, "none"]]
+    compare.extend(["4", "y"])
 
     assert meta_debug_lines == compare
 
@@ -115,6 +116,7 @@ def test(n, m, max_buffer_size):
 
     meta_debug_lines = read_lines(meta_output_file)
     compare = [str(i) for i in [n, min(x), max(x), "x", m, max(y), min(y), "y", 1, 0, 1, "none"]]
+    compare.extend(["4", "z"])
 
     assert meta_debug_lines == compare
 
@@ -178,6 +180,7 @@ def test_delayed(n, m, max_buffer_size):
 
     meta_debug_lines = read_lines(meta_output_file)
     compare = [str(i) for i in [n, min(x), max(x), "x", m, max(y), min(y), "y", 1, 0, 1, "none"]]
+    compare.extend(["4", "z"])
 
     assert meta_debug_lines == compare
 
