@@ -1,4 +1,4 @@
-from typing import Union, Optional
+from typing import Union, Optional, Any
 
 from qcodes import Parameter, Instrument
 
@@ -94,7 +94,7 @@ class Alias(Parameter):
             name: str,
             instrument: Optional[Instrument]=None,
             mapping: Optional[Union[float, int, BaseMapping]]=None,
-            **kwargs: dict
+            **kwargs: str
     ):
         self._parameter = parameter
         self.name = name
