@@ -107,6 +107,10 @@ class SpyviewWriter:
         independent_collapsed = [[k, collapse(self._buffer[k]["value"])] for k in self._buffer
                                   if "independent_parameter" in self._buffer[k]]
 
+        if len(independent_collapsed) == 0:
+            raise RuntimeError("No independent parameters found. Make sure you label at least one output as an "
+                               "independent parameter. Please consult the pysweep documentation at page TBD.")
+
         s = sorted(independent_collapsed, key=lambda el: el[1], reverse=True)
         return list(zip(*s))[0]
 
@@ -159,6 +163,9 @@ class SpyviewWriter:
 
     def add(self, dictionary):
         delayed_params_buffer = {param: {"value": []} for param in self._delayed_parameters}
+
+        if self._buffer == {}:
+            self._buffer = {k: {"value": []} for k in dictionary.keys()}
 
         self._buffer = self._merger.merge([dictionary, delayed_params_buffer, self._buffer])
         buffer_size = self._get_buffer_size()

@@ -1,8 +1,9 @@
 from hypothesis import given, settings
 from hypothesis.strategies import integers
+import pytest
 
 import tempfile
-from pysweep.data_storage.spyview import SpyviewWriter, SpyviewMetaWriter, SpyviewStorage
+from pysweep.data_storage.spyview import SpyviewWriter, SpyviewMetaWriter
 
 
 def read_lines(file):
@@ -10,7 +11,35 @@ def read_lines(file):
     return file.read().decode().split("\n")
 
 
-@given(integers(min_value=3, max_value=700), integers(min_value=5, max_value=500))
+def test_no_independent_params_exception():
+
+    def output_write_function(output):
+        pass
+
+    def meta_write_function(output):
+        pass
+
+    meta_writer = SpyviewMetaWriter(meta_write_function)
+    writer = SpyviewWriter(output_write_function, meta_writer, max_buffer_size=1)
+
+    m, n = 3, 3
+    x = list(range(m))
+    y = [ix ** 2 + 3 for ix in x]
+
+    x_dicts = [{"x": {"unit": "u", "value": v}} for v in x]  # This should be an independent parameter, but Isn't
+    y_dicts = [{"y": {"unit": "v", "value": v}} for v in y]
+
+    for dict_list in zip(x_dicts, y_dicts):
+
+        merge = {}
+        for d in dict_list:
+            merge.update(d)
+
+        with pytest.raises(RuntimeError) as e_info:
+            writer.add(merge)
+
+
+@given(integers(min_value=3, max_value=700), integers(min_value=1, max_value=500))
 @settings(max_examples=30)
 def test_1d(m, max_buffer_size):
 
@@ -61,7 +90,7 @@ def test_1d(m, max_buffer_size):
     assert meta_debug_lines == compare
 
 
-@given(integers(min_value=3, max_value=7), integers(min_value=3, max_value=7), integers(min_value=5, max_value=500))
+@given(integers(min_value=3, max_value=7), integers(min_value=3, max_value=7), integers(min_value=1, max_value=500))
 @settings(max_examples=30)
 def test(n, m, max_buffer_size):
 
