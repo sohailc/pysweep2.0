@@ -18,11 +18,11 @@ class SpyviewMetaWriter:
         self._axis_properties = defaultdict(lambda: dict(self._default_axis_properties))
         self._axis_properties["none"] = dict(max=0, min=1, step=0, length=1, name="none")
 
-    def _update_axis_properties(self, parameter_name, parameters_values):
+    def _update_axis_properties(self, parameter_name, parameters_values, unit):
         mn = parameters_values[0]
         mx = parameters_values[-1]
 
-        self._axis_properties[parameter_name]["name"] = parameter_name
+        self._axis_properties[parameter_name]["name"] = f"{parameter_name} [{unit}]"
         self._axis_properties[parameter_name]["max"] = mx
         self._axis_properties[parameter_name]["min"] = mn
 
@@ -38,18 +38,20 @@ class SpyviewMetaWriter:
         property_names = ["length", "min", "max", "name"]
         property_values = []
 
-        for column_nr, param in enumerate(parameters):
+        for column_nr, parameter_name in enumerate(parameters):
 
-            if param == "none" or "independent_parameter" in spyview_buffer[param]:
-                if param != "none":
-                    value = sorted(set(spyview_buffer[param]["value"]))
-                    self._update_axis_properties(param, value)
+            if parameter_name == "none" or "independent_parameter" in spyview_buffer[parameter_name]:
+                if parameter_name != "none":
+                    unit = spyview_buffer[parameter_name]["unit"]
+                    value = sorted(set(spyview_buffer[parameter_name]["value"]))
+                    self._update_axis_properties(parameter_name, value, unit)
 
-                s = "\n".join(str(self._axis_properties[param][k]) for k in property_names)
+                s = "\n".join(str(self._axis_properties[parameter_name][k]) for k in property_names)
                 property_values.append(s)
                 property_names = ["length", "max", "min", "name"]
             else:
-                s = "\n".join([str(column_nr + 1), param])
+                unit = spyview_buffer[parameter_name]["unit"]
+                s = "\n".join([str(column_nr), f"{parameter_name} [{unit}]"])
                 property_values.append(s)
 
         out = "\n".join(property_values)
@@ -120,7 +122,8 @@ class SpyviewWriter:
             first_independent_parameter = self._independent_parameters[0]
             self._buffer["empty"] = {
                 "value": [0] * len(self._buffer[first_independent_parameter]["value"]),
-                "independent_parameter": True
+                "independent_parameter": True,
+                "unit": ""
             }
 
         return self._buffer[key]["value"]
@@ -130,9 +133,6 @@ class SpyviewWriter:
         # We will first write the independent parameters in the right order
         if len(self._independent_parameters) == 0:
             self._independent_parameters = self._find_independent_parameters()
-
-            if len(self._independent_parameters) == 0:
-                raise ValueError("At least one independent parameter needed")
 
             if len(self._independent_parameters) == 1:
                 self._independent_parameters += ("empty",)
