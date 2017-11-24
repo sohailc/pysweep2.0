@@ -165,7 +165,7 @@ class SpyviewWriter:
         delayed_params_buffer = {param: {"value": []} for param in self._delayed_parameters}
 
         if self._buffer == {}:
-            self._buffer = {k: {"value": []} for k in dictionary.keys()}
+            self._buffer = {k: {"value": []} for k in dictionary.keys()}  # Make sure all values are lists
 
         self._buffer = self._merger.merge([dictionary, delayed_params_buffer, self._buffer])
         buffer_size = self._get_buffer_size()
