@@ -1,5 +1,5 @@
-from pysweep.sweep_object import sweep, nested_sweep, ParameterSweep, ChainSweep
-from pysweep.tests.testing_utilities import equivalence_test
+from pysweep.sweep_object import sweep, nested_sweep, ParameterSweep, ChainSweep, HardwareSweep
+from pysweep.tests.testing_utilities import equivalence_test, run_test_function
 
 from .testing_utilities import sorted_dict
 
@@ -234,3 +234,28 @@ def test_chain_nest():
 
     equivalence_test(test1, compare)
     equivalence_test(test2, compare)
+
+
+def test_hardware_sweep():
+
+    def hardware_measurement(hardware_buffer):
+        def inner(station, namespace):
+            return {"measurement": {"unit": "-", "value": hardware_buffer, "independent_parameter": True}}
+
+        return inner
+
+    def test(params, values, stdio, measure, namespace):
+
+        measurement_function = hardware_measurement(values[0])
+        p = params[0]
+        value = values[1]
+
+        so = sweep(p, value)
+        hwso = HardwareSweep(measurement_function)
+
+        for i in so(hwso):
+            stdio.write(i)
+
+        print(stdio._buffer)
+
+    run_test_function(test)
