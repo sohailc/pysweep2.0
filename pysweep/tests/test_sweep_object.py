@@ -1,3 +1,5 @@
+import numpy as np
+
 from pysweep.sweep_object import sweep, nested_sweep, ParameterSweep, ChainSweep, HardwareSweep
 from pysweep.tests.testing_utilities import equivalence_test, run_test_function
 
@@ -238,14 +240,22 @@ def test_chain_nest():
 
 def test_hardware_sweep():
 
-    def hardware_measurement(hardware_buffer):
+    def hardware_measurement(values):
         def inner(station, namespace):
-            return {"measurement": {"unit": "-", "value": hardware_buffer, "independent_parameter": True}}
+            v = namespace.v
+            namespace.v += 1
+            read_values = [i * v for i in values]
+            return {
+                "measurement": {"unit": "V", "value": read_values},
+                "index": {"unit": "-", "value": list(range(len(read_values))), "independent_parameter": True},
+                "other": {"unit": "T", "value": values[0] - v}
+            }
 
         return inner
 
     def test(params, values, stdio, measure, namespace):
 
+        namespace.v = 0
         measurement_function = hardware_measurement(values[0])
         p = params[0]
         value = values[1]
@@ -253,9 +263,28 @@ def test_hardware_sweep():
         so = sweep(p, value)
         hwso = HardwareSweep(measurement_function)
 
-        for i in so(hwso):
+        for i in so(hwso).set_namespace(namespace):
             stdio.write(i)
 
-        print(stdio._buffer)
+        return str(stdio)
 
-    run_test_function(test)
+    def compare(params, values, stdio, measure, namespace):
+
+        p = params[0]
+        v = 0
+
+        for value1 in values[1]:
+            p(value1)
+            for count, value0 in enumerate(values[0]):
+                i = {
+                    "measurement": {"unit": "V", "value": v * value0},
+                    "index": {"unit": "-", "value": count, "independent_parameter": True},
+                    "other": {"unit": "T", "value": values[0][0] - v}
+                }
+                i.update(param_log_format(p, value1))
+                stdio.write(i)
+            v += 1
+
+        return str(stdio)
+
+    equivalence_test(test, compare)

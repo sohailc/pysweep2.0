@@ -3,6 +3,7 @@ Sweep object definitions
 """
 import collections
 from collections import OrderedDict
+import copy
 import itertools
 import time
 
@@ -283,10 +284,10 @@ class HardwareSweep(BaseSweepObject):
         super().__init__()
 
     def _make_result_generator(self, param_result):
-        value = param_result["value"]
+        value = copy.copy(param_result["value"])
 
         if not isinstance(value, collections.Sized):
-            param_result["value"] = itertools.repeat(value)
+            value = itertools.repeat(value)
             self._value_sizes.add(1)
         else:
             self._value_sizes.add(len(value))
