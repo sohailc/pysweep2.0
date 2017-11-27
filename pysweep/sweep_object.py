@@ -276,7 +276,27 @@ class ParameterWrapper(BaseSweepObject):
 
 class HardwareSweep(BaseSweepObject):
     """
-    Hardware sweep
+    Hardware sweep. In effect the sweeping of parameters is performed by the hardware and we read the measurement values
+    of this sweep in one go by reading the instrument buffer. Therefore, the value key of the measurement dictionary is
+    an array or list.
+
+    Parameters
+    ----------
+    func: callable
+        A callable of station, namespace. The return value of this function is a dictionary
+
+    Example
+    -------
+    >>> hardware_measurement = lambda station, namespace: {"some_measurement": {"unit": "V", "value": [0, 1, 2, 3]}}
+    >>> so = HardwareSweep(hardware_measurement)
+    >>> for iteration in so:
+    >>>     print(iteration)
+    >>> {"some_measurement": {"unit": "V", "value": 0}
+    >>> {"some_measurement": {"unit": "V", "value": 1}
+    >>> {"some_measurement": {"unit": "V", "value": 2}
+    >>> {"some_measurement": {"unit": "V", "value": 3}
+
+    See docs/hardware_sweep_example.ipynb for further examples.
     """
     def __init__(self, func):
         self._func = func
@@ -294,9 +314,7 @@ class HardwareSweep(BaseSweepObject):
 
         def inner():
             for v in value:
-                # It is important that the next line is in the for-loop. We need to make a fresh copy of param_result
-                # every time. If we do not, and downstream code keeps iterations of p in memory (like happens in data
-                # storage modules), previous iterations of p will be mutated, leading to data corruption.
+                # Make a fresh copy of param_result every time to avoid troubles with immutable objects.
                 # See test_hardware_sweep_sanity in the sweep object test module.
                 p = dict(param_result)
                 p["value"] = v

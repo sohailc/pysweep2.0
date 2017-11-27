@@ -242,32 +242,22 @@ def test_hardware_sweep_sanity():
     """
     We need to be careful how we generate our objects in the hardware sweep. If we do not make copies of immutable
     objects, subtle but potentially catastrophic bugs can be introduced. Test that the objects yielded are not
-    references to previous iterations. Do this by keeping all iterations in memory and test that unwinding a fresh
-    copy of the sweep object will yield identical results.
+    references to previous iterations. Unwind an hardware sweep and assert that the previous iteration is *not* the
+    same as the current iteration.
     """
 
-    def hardware_measurement(values):
-        def inner(station, namespace):
-            return {
-                "measurement": {"unit": "V", "value": values},
-            }
+    def hardware_measurement(station, namespace):
+        return {
+            "measurement": {"unit": "V", "value": [0, 1, 2, 3]},
+        }
 
-        return inner
+    so = HardwareSweep(hardware_measurement)
+    previous_iteration = None
+    for iteration in so:
+        if previous_iteration is not None:
+            assert previous_iteration != iteration
 
-    def test(params, values, stdio, measure, namespace):
-
-        hard_sweep_values = [0, 1, 2, 3]
-        measurement_function = hardware_measurement(hard_sweep_values)
-        p = params[0]
-        soft_sweep_values = [9, 10, 11]
-
-        so = sweep(p, soft_sweep_values)(HardwareSweep(measurement_function))
-        so_list = list(so)  # Keep all iterations in memory by making a list.
-
-        for compare, iteration in zip(so_list, sweep(p, soft_sweep_values)(HardwareSweep(measurement_function))):
-            assert iteration == compare
-
-    run_test_function(test)
+        previous_iteration = iteration  # Keep a reference to the iteration in memory
 
 
 def test_hardware_sweep():
