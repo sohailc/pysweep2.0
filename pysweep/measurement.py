@@ -64,7 +64,7 @@ class Measurement:
         self.name = None
         self._has_run = False
 
-    def run(self, **storage_kwargs):
+    def run(self, namespace=None, **storage_kwargs):
 
         self._data_storage = self._data_storage or Measurement.get_default_storage(**storage_kwargs)
 
@@ -72,7 +72,9 @@ class Measurement:
             raise RuntimeError("This measurement has already run. Running twice is disallowed")
         self._has_run = True
 
-        namespace = Namespace()
+        if namespace is None:
+            namespace = Namespace()
+
         self._sweep_object.set_station(Measurement.station)
         self._sweep_object.set_namespace(namespace)
 

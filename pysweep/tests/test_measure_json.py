@@ -3,7 +3,7 @@ from qcodes import Station
 from .testing_utilities import equivalence_test, run_test_function
 
 from pysweep.measurement import Measurement
-from pysweep import sweep
+from pysweep import sweep, hardware_sweep
 
 Measurement.use_storage("json")
 station = Station()
@@ -157,3 +157,33 @@ def test_simple_nested():
     equivalence_test(test1, compare)
     equivalence_test(test2, compare)
 
+
+def test_hardware_sweep():
+
+    def hardware_measurement(values):
+        def inner(station, namespace):
+            return {
+                "measurement": {"unit": "V", "value": values},
+            }
+
+        return inner
+
+    def test(params, values, stdio, measure, namespace):
+
+        measurement_function = hardware_measurement([0, 1, 2, 3])
+        p = params[0]
+        soft_sweep_values = [9, 10, 11]
+
+        so = sweep(p, soft_sweep_values)(hardware_sweep(measurement_function))
+        setup, cleanup = measure[:2]
+
+        measurement = Measurement(
+            setup,
+            cleanup,
+            so
+        ).run()
+
+        out = measurement.output("measurement")
+        print(out)
+
+    run_test_function(test)

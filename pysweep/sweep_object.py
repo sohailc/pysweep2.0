@@ -293,8 +293,12 @@ class HardwareSweep(BaseSweepObject):
             self._value_sizes.add(len(value))
 
         def inner():
-            p = dict(param_result)
             for v in value:
+                # It is important that the next line is in the for-loop. We need to make a fresh copy of param_result
+                # every time. If we do not, and downstream code keeps iterations of p in memory (like happens in data
+                # storage modules), previous iterations of p will be mutated, leading to data corruption.
+                # See test_hardware_sweep_sanity in the sweep object test module.
+                p = dict(param_result)
                 p["value"] = v
                 yield p
 
@@ -481,3 +485,7 @@ def zip_sweep(*sweep_objects):
 
 def time_trace(measure, delay, total_time):
     return TimeTrace(measure, delay, total_time)
+
+
+def hardware_sweep(measurement_function):
+    return HardwareSweep(measurement_function)

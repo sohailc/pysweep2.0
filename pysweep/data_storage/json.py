@@ -19,7 +19,7 @@ class JSONStorage(BaseStorage, DictMerge):
         for key in dictionary.keys():
             self._unique_names.add(key)
 
-        self.buffer.append(dictionary)
+        self.buffer.append(dict(dictionary))
 
     def output(self, name):
 
