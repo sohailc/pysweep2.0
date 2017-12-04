@@ -1,5 +1,5 @@
 from pysweep import Namespace
-from pysweep.data_storage import JSONStorage, SpyviewStorage
+from pysweep.data_storage import JSONStorage, SpyviewStorage, QcodesStorage
 from pysweep.sweep_object import ChainSweep
 
 
@@ -16,6 +16,11 @@ class Measurement:
             "storage_class": JSONStorage,
             "args": [],
             "kwargs": dict(unit="replace", value="append", independent_parameter="replace")
+        },
+        "qcodes": {
+            "storage_class": QcodesStorage,
+            "args": [],
+            "kwargs": dict()
         }
     }
 

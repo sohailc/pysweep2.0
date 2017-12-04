@@ -18,4 +18,3 @@ dependencies:
  - hypothesis
  - pytest
  - pytest-runner
- - qcodes 
