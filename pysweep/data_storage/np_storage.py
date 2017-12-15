@@ -2,11 +2,8 @@ import numpy as np
 from collections import defaultdict
 from numpy.lib.recfunctions import merge_arrays
 
+from pysweep.data_storage import Delayed
 from pysweep.data_storage.base_storage import BaseStorage
-
-
-class Delayed:
-    pass
 
 
 class DataSet(np.ndarray):
@@ -100,7 +97,7 @@ class NpStorage(BaseStorage):
         return self._pages.__getitem__(item)
 
     def finalize(self):
-        pass  # TODO: Left off here
+        pass
 
     def save_json_snapshot(self, snapshot):
         self.snapshot = snapshot
