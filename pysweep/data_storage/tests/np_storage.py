@@ -76,3 +76,38 @@ def test_2d_nd_measurement():
     tmpx = store["m"]["x []"].reshape((m, n))
     tmpy = store["m"]["y []"].reshape((m, n))
     assert np.all(np.vstack([tmpy, tmpx]) == np.vstack(np.meshgrid(coordinate_values_y, coordinate_values_x)))
+
+
+def test_2d_nd_multi_measurement():
+    m, n, o = 5, 7, 3
+
+    param_x = lambda s, n, v: {"x": {"unit": "", "value": v, "independent_parameter": True}}
+    coordinate_values_x = np.arange(m)
+
+    param_y = lambda s, n, v: {"y": {"unit": "", "value": v, "independent_parameter": True}}
+    coordinate_values_y = np.arange(n)
+
+    measure_values1 = np.arange(m * n * o).reshape((m * n, o))
+    g = (i for i in measure_values1)
+    measure1 = lambda s, n: {"m": {"unit": "", "value": next(g)}}
+
+    measure_values2 = np.linspace(-1, 1, m)
+    h = (i for i in measure_values2)
+    measure2 = lambda s, n: {"n": {"unit": "", "value": next(h)}}
+
+    so = sweep(param_x, coordinate_values_x)(measure2, sweep(param_y, coordinate_values_y)(measure1))
+
+    store = NpStorage()
+
+    for i in so:
+        store.add(i)
+
+    assert np.all(store["m"]["m []"] == measure_values1)
+
+    tmpx = store["m"]["x []"].reshape((m, n))
+    tmpy = store["m"]["y []"].reshape((m, n))
+    assert np.all(np.vstack([tmpy, tmpx]) == np.vstack(np.meshgrid(coordinate_values_y, coordinate_values_x)))
+
+    assert np.all(store["n"]["n []"].flatten() == measure_values2)
+    assert np.all(store["n"]["x []"].flatten() == coordinate_values_x)
+    assert "y []" not in store["n"]
