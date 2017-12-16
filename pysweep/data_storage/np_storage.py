@@ -2,8 +2,11 @@ import numpy as np
 from collections import defaultdict
 from numpy.lib.recfunctions import merge_arrays
 
-from pysweep.data_storage import Delayed
 from pysweep.data_storage.base_storage import BaseStorage
+
+
+class Delayed:
+    pass
 
 
 class DataSet(np.ndarray):
