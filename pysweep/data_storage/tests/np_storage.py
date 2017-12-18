@@ -1,7 +1,9 @@
 import numpy as np
 
-from pysweep.data_storage import NpStorage
-from pysweep import sweep
+import pytest
+
+from pysweep.data_storage import NpStorage, Delayed, DataSet
+from pysweep import sweep, Namespace
 
 
 def test_1d():
@@ -111,3 +113,81 @@ def test_2d_nd_multi_measurement():
     assert np.all(store["n"]["n []"].flatten() == measure_values2)
     assert np.all(store["n"]["x []"].flatten() == coordinate_values_x)
     assert "y []" not in store["n"]
+
+
+def test_delay():
+
+    N = 16
+    param = lambda s, n, v: {"x": {"unit": "", "value": v, "independent_parameter": True}}
+    measure_values = np.linspace(-1, 1, N)
+
+    def measure(s, n):
+        n.count += 1
+        c = n.count
+        if c % 4 == 0:
+            rval = DataSet(measure_values[c-4: c])
+        else:
+            rval = Delayed()
+
+        return {"m": {"unit": "", "value": rval}}
+
+    namespace = Namespace()
+    namespace.count = 0
+    coordinate_values = np.array(range(N))
+    so = sweep(param, coordinate_values)(measure).set_namespace(namespace)
+
+    store = NpStorage()
+
+    for i in so:
+        store.add(i)
+
+    assert np.all(store["m"]["m []"].flatten() == measure_values)
+    assert np.all(store["m"]["x []"].flatten() == coordinate_values)
+
+
+def test_data_set():
+
+    xvals = np.linspace(0, 1, 10)
+    yvals = np.sin(xvals)
+
+    param = lambda s, n, v: {"x": {"unit": "", "value": v, "independent_parameter": True}}
+    measure = lambda s, n, v: {"m": {"unit": "", "value": v}}
+
+    dset = param(None, None, xvals[:5])
+    dset.update(measure(None, None, yvals[:5]))
+
+    store = NpStorage()
+    store.dataset(dset)
+
+    g = iter(yvals[5:])
+    measure2 = lambda s, n: measure(s, n, next(g))
+
+    so = sweep(param, xvals[5:])(measure2)
+
+    for i in so:
+        store.add(i)
+
+    assert np.all(store["m"]["m []"].flatten() == yvals)
+    assert np.all(store["m"]["x []"].flatten() == xvals)
+
+
+def test_shape_mismatch_exception():
+
+    param = lambda s, n, v: {"x": {"unit": "", "value": v, "independent_parameter": True}}
+    measure_values = [[0, 1, 2], [3, 4, 5], [6, 7, 8, 9], [10, 11, 12]]  # The third one is longer on purpose
+    g = (i for i in measure_values)
+    measure = lambda s, n: {"m": {"unit": "", "value": next(g)}}
+
+    coordinate_values = np.array([0, 1, 2, 3])
+    so = sweep(param, coordinate_values)(measure)
+
+    store = NpStorage()
+
+    for count, i in enumerate(so):
+        if count == 2:
+            with pytest.raises(TypeError) as e:
+                store.add(i)
+            assert str(e.value) == "The shape or dtype of the measurement and/or independent parameter has suddenly " \
+                                   "changed. This is not allowed"
+        else:
+            store.add(i)

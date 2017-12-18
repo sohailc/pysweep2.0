@@ -10,7 +10,7 @@ class PandasStorage(NpStorage):
         dtype = data_frame.dtype
 
         if any([dtype[n].subdtype[1] != (1,) for n in dtype.names]):
-            raise ValueError("Cannot convert frames containing multi-dimensional arrays to a Pandas frame")
+            raise TypeError("Cannot convert frames containing multi-dimensional arrays to a Pandas frame")
 
         new_dtype = [(n, dtype[n].subdtype[0]) for n in dtype.names]
         new_data_frame = np.ndarray.view(data_frame, dtype=new_dtype)

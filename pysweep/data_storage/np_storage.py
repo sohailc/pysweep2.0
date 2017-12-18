@@ -83,7 +83,12 @@ class NpStorage(BaseStorage):
                 del self._delay_buffer[name]
 
             page = merge_arrays([independents, dependent], flatten=True, usemask=False)
-            self._pages[name] = self.sane_append(self._pages[name], page)
+
+            try:
+                self._pages[name] = self.sane_append(self._pages[name], page)
+            except TypeError:
+                raise TypeError("The shape or dtype of the measurement and/or independent parameter has suddenly "
+                                "changed. This is not allowed")
 
     def dataset(self, dset):
 
