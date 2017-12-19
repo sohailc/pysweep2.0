@@ -102,6 +102,9 @@ class NpStorage(BaseStorage):
         return self[item]
 
     def __getitem__(self, item):
+        if item not in self._pages:
+            raise KeyError("{} not found. Possible values are {}".format(item, ",".join([str(i) for i in
+                                                                                         self._pages.keys()])))
         return self._pages.__getitem__(item)
 
     def finalize(self):
