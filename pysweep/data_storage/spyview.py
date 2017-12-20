@@ -3,10 +3,11 @@ import os
 import json
 import time
 import re
+from collections import defaultdict
 
 import qcodes
 
-from pysweep.data_storage.np_storage import NpStorage
+from pysweep.data_storage.base_storage import BaseStorage
 
 
 class FileWriter:
@@ -107,7 +108,6 @@ class SpyviewWriter:
 
         out = "\n".join(["# {}".format(i) for i in params]) + "\n" + out
         self._writer.write(out)
-
         self._meta_writer.write(page)
 
     @property
@@ -115,7 +115,7 @@ class SpyviewWriter:
         return self._writer.file_path
 
 
-class SpyviewStorage(NpStorage):
+class SpyviewStorage(BaseStorage):
     """
     The spyview storage module
     """
@@ -153,14 +153,6 @@ class SpyviewStorage(NpStorage):
         return file_path
 
     @staticmethod
-    def increment_file_number(file_path, increment=1):
-        ss = "_([0-9]*).dat"
-        result = re.search(ss, file_path)
-        file_num = int(result.groups()[0])
-        sub = "_{:0>3}.dat".format(file_num + increment)
-        return re.sub(ss, sub, file_path)
-
-    @staticmethod
     def meta_file_path(output_file_path: str):
         dirname, filename = os.path.split(output_file_path)
         meta_file_name = filename.replace(".dat", ".meta.txt")
@@ -172,41 +164,45 @@ class SpyviewStorage(NpStorage):
         json_file_name = filename.replace(".dat", ".station_snapshot.json")
         return os.path.join(dirname, json_file_name)
 
+    @staticmethod
+    def increment_file_number(file_path, increment=1):
+        ss = "_([0-9]*).dat"
+        result = re.search(ss, file_path)
+        file_num = int(result.groups()[0])
+        sub = "_{:0>3}.dat".format(file_num + increment)
+        return re.sub(ss, sub, file_path)
+
     def __init__(self, write_delay=5):
         super().__init__()
-        self._store_parameters = None
-        self._spywriters = {}
+        self._spywriters = defaultdict(self.create_spyview_writer)
 
         self._last_write_action = time.time()
         self._write_delay = write_delay
         self._base_file_path = SpyviewStorage.default_file_path()
+        self._n_spyview_files = 0
 
-    def _init(self, store_parameters):
+    def create_spyview_writer(self):
+        file_path = self.increment_file_number(self._base_file_path, self._n_spyview_files)
+        file_writer = FileWriter(file_path)
+        self._n_spyview_files += 1
 
-        self._store_parameters = store_parameters
+        meta_file_path = self.meta_file_path(file_path)
+        meta_file_writer = FileWriter(meta_file_path)
+        meta_writer = SpyviewMetaWriter(meta_file_writer)
 
-        for count, param in enumerate(self._store_parameters):
-            file_path = self.increment_file_number(self._base_file_path, count)
-            file_writer = FileWriter(file_path)
+        if self._base_file_path is None:
+            self._base_file_path = file_path
 
-            meta_file_path = self.meta_file_path(file_path)
-            meta_file_writer = FileWriter(meta_file_path)
-            meta_writer = SpyviewMetaWriter(meta_file_writer)
-
-            self._spywriters[param] = SpyviewWriter(file_writer, meta_writer)
+        return SpyviewWriter(file_writer, meta_writer)
 
     def add(self, dictionary):
         super().add(dictionary)
-
-        if self._store_parameters is None:
-            store_parameters = self._pages.keys()
-            self._init(store_parameters)
 
         if time.time() - self._last_write_action >= self._write_delay:
             self._write()
 
     def _write(self):
-        for param in self._store_parameters:
+        for param in self._pages.keys():
             page = self.output(param)
             self._spywriters[param].write(page)
 
