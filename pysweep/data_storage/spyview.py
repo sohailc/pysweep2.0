@@ -2,30 +2,74 @@ import numpy as np
 import os
 import json
 import time
+import re
 
 import qcodes
 
 from pysweep.data_storage.np_storage import NpStorage
-from pysweep.data_storage.base_storage import BaseStorage
 
 
-class SpyviewWriter(NpStorage):
+class FileWriter:
+    def __init__(self, file_path, mode="w"):
+        self._file_path = file_path
+        self._mode = mode
 
-    def __init__(self, store_parameters, writer_function, write_interval_time=5):
-        super().__init__()
-        self._store_parameters = store_parameters
-        self._writer_function = writer_function
-        self._write_interval_time = write_interval_time
-        self._last_write_action = time.time()
+    def write(self, out_string):
+        with open(self._file_path, self._mode) as fh:
+            fh.write(out_string)
 
-    def add(self, record):
-        super().add(record)
+    @property
+    def file_path(self):
+        return self._file_path
 
-        current_time = time.time()
-        if current_time - self._last_write_action < self._write_interval_time:
-            return
-        self._last_write_action = current_time
-        self._write()
+
+class SpyviewMetaWriter:
+    def __init__(self, writer):
+        self._writer = writer
+
+    @staticmethod
+    def find_axis_properties(array):
+        axis = np.unique(array)
+        return dict(
+            min=np.min(axis),
+            max=np.max(axis),
+            length=len(axis)
+        )
+
+    def write(self, page):
+        property_names = ["length", "min", "max", "name"]
+        property_values = []
+
+        independent_parameters = list(page.dtype.names[:-1])
+
+        if len(independent_parameters) == 2:
+            independent_parameters.append("none")
+
+        for axis_name in independent_parameters:
+
+            if axis_name != "none":
+                axis_properties = self.find_axis_properties(page[axis_name])
+            else:
+                axis_properties = dict(max=0, min=1, length=1)
+
+            axis_properties["name"] = axis_name
+
+            s = "\n".join(str(axis_properties[k]) for k in property_names)
+            property_values.append(s)
+            property_names = ["length", "max", "min", "name"]
+
+        axis_name = page.dtype.names[-1]
+        s = "\n".join(["3", axis_name])
+        property_values.append(s)
+
+        out = "\n".join(property_values)
+        self._writer.write(out)
+
+
+class SpyviewWriter:
+    def __init__(self, writer, meta_writer):
+        self._writer = writer
+        self._meta_writer = meta_writer
 
     @staticmethod
     def insert_field(array, position, field_name, field_dtype):
@@ -45,15 +89,11 @@ class SpyviewWriter(NpStorage):
 
         return new_array
 
-    def _write(self):
-        for param in self._store_parameters:
-            page = self.output(param)
-            self._write_page(page)
-
-    def _write_page(self, page):
-        params = page.dtype.names
+    def write(self, page):
+        params = list(page.dtype.names)
         if len(params) == 2:
             page = self.insert_field(page, 1, "empty", np.dtype((int, (1,))))
+            params.insert(1, "empty")
 
         inner = params[0]
         inner_sweep_values = page[inner]
@@ -64,13 +104,18 @@ class SpyviewWriter(NpStorage):
         lines = ["\t".join([str(i[0]) for i in p[0]]) for p in list(zip(page))]
         lines = ["{}{}".format(*i) for i in zip(escapes, lines)]
         out = "".join(lines)
-        self._writer_function(out)
 
-    def finalize(self):
-        self._write()
+        out = "\n".join(["# {}".format(i) for i in params]) + "\n" + out
+        self._writer.write(out)
+
+        self._meta_writer.write(page)
+
+    @property
+    def file_path(self):
+        return self._writer.file_path
 
 
-class SpyviewStorage(BaseStorage):
+class SpyviewStorage(NpStorage):
     """
     The spyview storage module
     """
@@ -108,6 +153,14 @@ class SpyviewStorage(BaseStorage):
         return file_path
 
     @staticmethod
+    def increment_file_number(file_path, increment=1):
+        ss = "_([0-9]*).dat"
+        result = re.search(ss, file_path)
+        file_num = int(result.groups()[0])
+        sub = "_{:0>3}.dat".format(file_num + increment)
+        return re.sub(ss, sub, file_path)
+
+    @staticmethod
     def meta_file_path(output_file_path: str):
         dirname, filename = os.path.split(output_file_path)
         meta_file_name = filename.replace(".dat", ".meta.txt")
@@ -119,41 +172,49 @@ class SpyviewStorage(BaseStorage):
         json_file_name = filename.replace(".dat", ".station_snapshot.json")
         return os.path.join(dirname, json_file_name)
 
-    def __init__(self, store_parameters):
+    def __init__(self, write_delay=5):
+        super().__init__()
+        self._store_parameters = None
+        self._spywriters = {}
 
-        self._output_file_path = SpyviewStorage.default_file_path()
-        self._output_meta_file_path = SpyviewStorage.meta_file_path(self._output_file_path)
-        self._data_folder, _ = os.path.split(self._output_file_path)
+        self._last_write_action = time.time()
+        self._write_delay = write_delay
+        self._base_file_path = SpyviewStorage.default_file_path()
 
-        self._writer = SpyviewWriter(store_parameters, writer_function=self._writer_function)
+    def _init(self, store_parameters):
 
-    def _meta_writer_function(self, output):
+        self._store_parameters = store_parameters
 
-        with open(self._output_meta_file_path, "w") as fh:
-            fh.write(output)
+        for count, param in enumerate(self._store_parameters):
+            file_path = self.increment_file_number(self._base_file_path, count)
+            file_writer = FileWriter(file_path)
 
-    def _writer_function(self, output):
+            meta_file_path = self.meta_file_path(file_path)
+            meta_file_writer = FileWriter(meta_file_path)
+            meta_writer = SpyviewMetaWriter(meta_file_writer)
 
-        with open(self._output_file_path, "w") as fh:
-            fh.write(output)
-
-    def output_files(self):
-        return self._output_file_path, self._output_meta_file_path
+            self._spywriters[param] = SpyviewWriter(file_writer, meta_writer)
 
     def add(self, dictionary):
-        self._writer.add(dictionary)
+        super().add(dictionary)
 
-    def output(self, item):
-        return self._writer.output(item)
+        if self._store_parameters is None:
+            store_parameters = self._pages.keys()
+            self._init(store_parameters)
+
+        if time.time() - self._last_write_action >= self._write_delay:
+            self._write()
+
+    def _write(self):
+        for param in self._store_parameters:
+            page = self.output(param)
+            self._spywriters[param].write(page)
 
     def finalize(self):
-        self._writer.finalize()
+        self._write()
 
     def save_json_snapshot(self, snapshot):
 
-        json_file = SpyviewStorage.snapshot_file_path(self._output_file_path)
+        json_file = SpyviewStorage.snapshot_file_path(self._base_file_path)
         with open(json_file, 'w') as meta_file:
             json.dump(snapshot, meta_file, sort_keys=True, indent=4, ensure_ascii=False)
-
-
-
