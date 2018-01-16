@@ -195,19 +195,10 @@ class SpyviewStorage(BaseStorage):
 
         return SpyviewWriter(file_writer, meta_writer)
 
-    def add(self, dictionary):
-        super().add(dictionary)
-
-        if time.time() - self._last_write_action >= self._write_delay:
-            self._write()
-
-    def _write(self):
+    def write(self):
         for param in self._pages.keys():
             page = self.output(param)
             self._spywriters[param].write(page)
-
-    def finalize(self):
-        self._write()
 
     def save_json_snapshot(self, snapshot):
 

@@ -16,3 +16,9 @@ class PandasStorage(BaseStorage):
         new_dtype = [(n, dtype[n].subdtype[0]) for n in dtype.names]
         new_data_frame = np.ndarray.view(data_frame, dtype=new_dtype)
         return pd.DataFrame(new_data_frame)
+
+    def write(self):
+        pass  # For now
+
+    def save_json_snapshot(self, snapshot):
+        pass  # for now
