@@ -1,3 +1,4 @@
+import time
 import numpy as np
 from collections import defaultdict
 from numpy.lib.recfunctions import merge_arrays
@@ -18,7 +19,7 @@ class DataSet(np.ndarray):
 
 class BaseStorage:
 
-    def __init__(self, storage=None):
+    def __init__(self, storage=None, write_delay=5):
 
         if storage is None:
             self._pages = defaultdict(lambda: None)
@@ -26,6 +27,8 @@ class BaseStorage:
             self._pages = storage.get_pages()
 
         self._delay_buffer = defaultdict(lambda: None)
+        self._last_write_action = time.time()
+        self._write_delay = write_delay
 
     @staticmethod
     def sane_append(array1, array2):
@@ -92,6 +95,10 @@ class BaseStorage:
                 raise TypeError("The shape or dtype of the measurement and/or independent parameter has suddenly "
                                 "changed. This is not allowed")
 
+            if time.time() - self._last_write_action >= self._write_delay:
+                self.write()
+                self._last_write_action = time.time()
+
     def dataset(self, dset):
 
         dset = dict(dset)  # Make a copy
@@ -113,7 +120,13 @@ class BaseStorage:
         pass
 
     def save_json_snapshot(self, snapshot):
-        self.snapshot = snapshot
+        raise NotImplementedError("Please subclass BaseStorage")
 
     def get_pages(self):
         return self._pages
+
+    def write(self):
+        """
+        Write data to disk
+        """
+        raise NotImplementedError("Please subclass BaseStorage")

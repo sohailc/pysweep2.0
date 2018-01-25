@@ -2,8 +2,16 @@ import numpy as np
 
 import pytest
 
-from pysweep.data_storage import NpStorage, Delayed, DataSet
+from pysweep.data_storage import BaseStorage, Delayed, DataSet
 from pysweep import sweep, Namespace
+
+
+class NpStorage(BaseStorage):
+    def write(self):
+        pass
+
+    def save_json_snapshot(self, snapshot):
+        pass
 
 
 def test_1d():
