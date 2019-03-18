@@ -2,8 +2,8 @@ import numpy as np
 
 from typing import Iterator, Callable
 
-from pytopo.sweep import param_table
-from pytopo.sweep.param_table import ParamTable
+from qsweep import param_table
+from qsweep.param_table import ParamTable
 
 
 class BaseSweepObject:

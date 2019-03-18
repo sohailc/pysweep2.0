@@ -1,5 +1,5 @@
 from qcodes.dataset.measurements import Measurement
-from pytopo.sweep.base import BaseSweepObject
+from qsweep.base import BaseSweepObject
 
 
 class SweepMeasurement(Measurement):

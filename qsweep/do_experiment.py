@@ -7,7 +7,7 @@ from qcodes.dataset.plotting import plot_by_id
 from qcodes.dataset.experiment_container import load_or_create_experiment
 from qcodes.dataset.data_set import DataSet
 
-from pytopo.sweep.measurement import SweepMeasurement
+from qsweep.measurement import SweepMeasurement
 
 
 class _DataExtractor:

@@ -2,9 +2,9 @@ import time
 
 from qcodes import Parameter
 
-from pytopo.sweep.base import Sweep, Measure, Zip, _CallSweepObject, Nest, Chain
+from qsweep.base import Sweep, Measure, Zip, _CallSweepObject, Nest, Chain
 
-from pytopo.sweep.decorators import (
+from qsweep.decorators import (
     parameter_setter, parameter_getter, MeasureFunction, SweepFunction
 )
 

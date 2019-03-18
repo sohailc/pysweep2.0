@@ -3,9 +3,9 @@ import numpy as np
 from typing import List, Iterable, Tuple, Callable, Any
 
 from qcodes import ParamSpec
-from pytopo.sweep import param_table
-from pytopo.sweep.param_table import ParamTable
-from pytopo.sweep.base import IteratorSweep
+from qsweep import param_table
+from qsweep.param_table import ParamTable
+from qsweep.base import IteratorSweep
 
 
 class _GetterSetterFunction:
