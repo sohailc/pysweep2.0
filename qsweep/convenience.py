@@ -1,23 +1,47 @@
+from typing import Union, Iterator
+
 import time
+import numpy as np
 
 from qcodes import Parameter
-
-from qsweep.base import Sweep, Measure, Zip, _CallSweepObject, Nest, Chain
-
+from qsweep.base import Sweep, Measure, Zip, Nest, Chain, BaseSweepObject
 from qsweep.decorators import (
     parameter_setter, parameter_getter, MeasureFunction, SweepFunction
 )
 
 
-def sweep(fun_or_param, set_points, paramtype: str = None):
+def sweep(
+        parameter: Union[Parameter, SweepFunction],
+        set_points: Iterator=None,
+        start: float=None,
+        step: float=None,
+        stop: float=None,
+        paramtype: str = None
+) -> BaseSweepObject:
+    """
+    Sweep a parameters or function over a set of points (given by the `set_points`
+    iterator) or from a `start_value` to a `stop_value` with steps of `step_value`.
+    """
 
-    if isinstance(fun_or_param, Parameter):
-        fun = parameter_setter(fun_or_param, paramtype=paramtype)
-    elif isinstance(fun_or_param, SweepFunction):
-        fun = fun_or_param
+    if isinstance(parameter, Parameter):
+        fun = parameter_setter(parameter, paramtype=paramtype)
+    elif isinstance(parameter, SweepFunction):
+        fun = parameter
     else:
-        raise ValueError("Can only sweep a QCoDeS parameter or a function "
-                         "decorated with pytopo.setter")
+        raise ValueError(
+            "Can only sweep a QCoDeS parameter or a function "
+            "decorated with qsweep.setter"
+        )
+
+    if set_points is None:
+
+        if any([i is None for i in [start, stop, step]]):
+            raise ValueError(
+                "If the set points iterator is None then start, stop and "
+                "step values are mandatory"
+            )
+
+        set_points = np.arange(start, stop + step, step)
 
     if not callable(set_points):
         sweep_object = Sweep(fun, fun.parameter_table, lambda: set_points)
@@ -69,16 +93,6 @@ def time_trace(interval_time, total_time=None, stop_condition=None):
 
 def szip(*sweep_objects):
     return Zip(*sweep_objects)
-
-
-# this does not work at the moment, see tests
-def _call(call_function, *args, **kwargs):
-    """
-    ...
-
-    Note: this feature DOES NOT WORK at the moment.
-    """
-    return _CallSweepObject(call_function, *args, **kwargs)
 
 
 def nest(*sweep_objects):

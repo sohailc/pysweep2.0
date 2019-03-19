@@ -1,6 +1,6 @@
 import numpy as np
 
-from typing import List, Iterable, Tuple, Callable, Any
+from typing import List, Iterable, Tuple, Callable
 
 from qcodes import ParamSpec
 from qsweep import param_table
@@ -138,12 +138,12 @@ def hardsweep(ind: List[Tuple], dep: List[Tuple]) ->Callable:
         in pytopo.do_experiment to run an experiment.
 
     Example:
-        >>> import pytopo
+        >>> import qsweep
         >>> @hardsweep(ind=[("x", "V"), ("y", "V")], dep=[("i", "A")])
         >>> def some_function():
         >>> ... # Some code setting up instruments and performing measurements
         >>> ... return set_points, measurements
-        >>> pytopo.do_experiement("name/sample", some_function)
+        >>> qsweep.do_experiement("name/sample", some_function)
 
         Since we have defined to independent parameters, `x` and `y`, the
         returned `set_points` should be a 2-by-N numpy array, where `N` is the
