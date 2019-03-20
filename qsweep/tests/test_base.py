@@ -2,8 +2,8 @@ import itertools
 import pytest
 
 from qcodes import Parameter, ParamSpec
-from pytopo.sweep.base import Sweep, Measure, Nest, Chain
-from pytopo.sweep.param_table import ParamTable
+from qsweep.base import Sweep, Measure, Nest, Chain
+from qsweep.param_table import ParamTable
 
 from ._test_tools import Factory
 

@@ -1,8 +1,8 @@
 import numpy
 import pytest
 
-from pytopo.sweep import setter, getter, sweep, measure
-from pytopo.sweep.decorators import MeasureFunction
+from qsweep import setter, getter, sweep, measure
+from qsweep.decorators import MeasureFunction
 
 
 def test_getter_with_2_numeric_paramtype():

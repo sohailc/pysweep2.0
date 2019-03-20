@@ -1,5 +1,5 @@
 from qcodes import ParamSpec
-from pytopo.sweep.base import ParamTable
+from qsweep.base import ParamTable
 
 
 def test_nest():

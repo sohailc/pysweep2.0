@@ -90,7 +90,9 @@ def getter(*names_units: Tuple) ->Callable:
 
     def decorator(func: Callable) ->MeasureFunction:
         def inner() ->dict:
-            results = np.atleast_1d(func())
+            results = func()
+            if not isinstance(results, tuple):
+                results = (results,)
             return {k[0]: v for k, v in zip(names_units, results)}
 
         return MeasureFunction(inner, table.copy())
