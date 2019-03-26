@@ -1,6 +1,7 @@
 import numpy as np
-
-from typing import Iterator, Callable
+from typing import Iterator, Callable, List
+import inspect
+from functools import partial
 
 from qsweep import param_table
 from qsweep.param_table import ParamTable
@@ -16,6 +17,18 @@ class BaseSweepObject:
         self._generator: Iterator = None
         self._parameter_table: ParamTable = None
         self._measurable = False
+        self._pre_step_calls: List[Callable] = []
+        self._post_step_calls: List[Callable] = []
+
+        self.add_pre_step = partial(
+            self._add_call,
+            self._pre_step_calls
+        )
+
+        self.add_post_step = partial(
+            self._add_call,
+            self._post_step_calls
+        )
 
     def _generator_factory(self) ->Iterator:
         """
@@ -35,10 +48,38 @@ class BaseSweepObject:
         if self._generator is None:
             self._start_iter()
 
-        return next(self._generator)
+        self._call_pre_step_calls()
+        try:
+            next_val = next(self._generator)
+        finally:
+            self._call_post_step_calls()
+
+        return next_val
 
     def __call__(self, *sweep_objects):
         return Nest(self, Chain(*sweep_objects))
+
+    def _call_pre_step_calls(self) -> None:
+        """
+        Call all pre-step functions
+        """
+        for cable in self._pre_step_calls:
+            cable()
+
+    def _call_post_step_calls(self) -> None:
+        """
+        Call all stop-step functions
+        """
+        for cable in self._post_step_calls:
+            cable()
+
+    @staticmethod
+    def _add_call(call_list: List[Callable], func: Callable) -> None:
+        signature = inspect.signature(func)
+        if len(signature.parameters) > 0:
+            raise TypeError("Only callable with one argument are accepted")
+
+        call_list.append(func)
 
     @property
     def parameter_table(self) ->ParamTable:
