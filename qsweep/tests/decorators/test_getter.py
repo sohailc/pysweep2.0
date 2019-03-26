@@ -1,5 +1,4 @@
 import numpy
-import pytest
 
 from qsweep import setter, getter, sweep, measure
 from qsweep.decorators import MeasureFunction
