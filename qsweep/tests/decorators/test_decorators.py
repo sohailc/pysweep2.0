@@ -1,5 +1,5 @@
 from qcodes import Parameter
-from pytopo.sweep.decorators import (
+from qsweep.decorators import (
     getter, setter, parameter_getter, parameter_setter
 )
 

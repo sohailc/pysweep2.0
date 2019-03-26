@@ -1,9 +1,9 @@
 import numpy
 import pytest
 
-from pytopo.sweep.base import IteratorSweep
-from pytopo.sweep.decorators import hardsweep, setter, getter
-from pytopo.sweep.convenience import sweep, measure
+from qsweep.base import IteratorSweep
+from qsweep.decorators import hardsweep, setter
+from qsweep.convenience import sweep
 
 
 def test_hardsweep():

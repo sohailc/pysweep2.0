@@ -2,8 +2,8 @@ import itertools
 import pytest
 
 from qcodes import Parameter, ParamSpec
-from pytopo.sweep.base import Sweep, Measure, Nest, Chain
-from pytopo.sweep.param_table import ParamTable
+from qsweep.base import Sweep, Measure, Nest, Chain
+from qsweep.param_table import ParamTable
 
 from ._test_tools import Factory
 
@@ -266,3 +266,24 @@ def test_error_no_nest_in_chain_2(indep_params, dep_params):
             sweep_object,
             Measure(j, tablej)
         )
+
+
+def test_post_call(indep_params):
+
+    class PostCaller:
+        def __init__(self):
+            self.call_count = 0
+
+        def __call__(self):
+            self.call_count += 1
+
+    post_call = PostCaller()
+
+    px, x, table = indep_params["x"]
+
+    sweep_values = [0, 1, 2]
+    parameter_sweep = Sweep(x, table, lambda: sweep_values)
+    parameter_sweep.add_post_step(post_call)
+
+    assert list(parameter_sweep) == [{"x": value} for value in sweep_values]
+    assert post_call.call_count == len(sweep_values)
