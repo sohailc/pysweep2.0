@@ -1,6 +1,6 @@
 import numpy as np
-
-from typing import Iterator, Callable
+from typing import Iterator, Callable, List
+import inspect
 
 from qsweep import param_table
 from qsweep.param_table import ParamTable
@@ -16,6 +16,7 @@ class BaseSweepObject:
         self._generator: Iterator = None
         self._parameter_table: ParamTable = None
         self._measurable = False
+        self._post_step_calls: List[Callable] = []
 
     def _generator_factory(self) ->Iterator:
         """
@@ -35,10 +36,31 @@ class BaseSweepObject:
         if self._generator is None:
             self._start_iter()
 
-        return next(self._generator)
+        next_val = next(self._generator)
+        self._call_post_step_calls()
+
+        return next_val
 
     def __call__(self, *sweep_objects):
         return Nest(self, Chain(*sweep_objects))
+
+    def _call_post_step_calls(self) -> None:
+        """
+        Call all stop-step functions
+        """
+        for cable in self._post_step_calls:
+            cable()
+
+    def add_post_step(self, func: Callable) -> None:
+        """
+        Add a function to be executed after taking each step in the
+        sweep object
+        """
+        signature = inspect.signature(func)
+        if len(signature.parameters) > 0:
+            raise TypeError("Only callable with zero arguments are accepted")
+
+        self._post_step_calls.append(func)
 
     @property
     def parameter_table(self) ->ParamTable:

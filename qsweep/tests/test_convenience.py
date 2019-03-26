@@ -91,23 +91,6 @@ def test_sanity_sweep_getter_function(sweep_functions):
     assert 'numeric' == so.parameter_table.param_specs[1].type
 
 
-def test_sanity_sweep_getter_array_function(sweep_functions):
-    qval = [0, 1, 2]
-
-    @getter(('q', "v", "array"))
-    def measure_function():
-        return qval
-
-    p = sweep_functions["p"]
-    values = [0, 1, 2]
-    so = sweep(p, values)(
-        measure(measure_function)
-    )
-    assert list(so) == [{"p": value, "q": qval} for value in values]
-    assert 'numeric' == so.parameter_table.param_specs[0].type
-    assert 'array' == so.parameter_table.param_specs[1].type
-
-
 def test_error():
     """
     Setter functions need to be decorated with `setter`
@@ -118,3 +101,4 @@ def test_error():
 
     with pytest.raises(ValueError):
         sweep(no_good_setter, [0, 1])
+
