@@ -75,7 +75,8 @@ def getter(*names_units: Tuple) ->Callable:
         names_units
             List of tuples with parameter names and units (and optionally
             'paramtype' that defines how the data is saved),
-            e.g. [("gate", "V"), ("Isd", "A", "array")]
+            e.g. [("gate", "V"), ("Isd", "A", "array")].
+            Allowed values for the paramtype are ['array', 'numeric', 'text']
 
     Returns:
         A decorator. The decorated function returns a callable and a parameter
