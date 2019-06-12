@@ -1,5 +1,5 @@
 from typing import Union, Iterator
-
+import logging
 import time
 import numpy as np
 
@@ -9,13 +9,49 @@ from qsweep.decorators import (
     parameter_setter, parameter_getter, MeasureFunction, SweepFunction
 )
 
+log = logging.getLogger()
+
+
+def make_setpoints_iterator(
+    start: float = None,
+    step: float = None,
+    step_count: int = None,
+    stop: float = None
+):
+    """
+    TODO: Docstring for this function
+    TODO: Test for this function
+    """
+    def _is_none(*lst):
+        return [i is None for i in lst]
+
+    if not any(_is_none(step, step_count)):
+        raise ValueError("Either step or step_count need to be given, but not both")
+
+    if any(_is_none(start, stop)) or all(_is_none(step_count, step)):
+        raise ValueError("We need both start and stop and one of step or step_count")
+
+    if step_count is None:
+        step_count = int(np.round((stop - start) / step))
+
+    set_points, actual_step = np.linspace(start, stop, step_count, retstep=True)
+    if not np.isclose(step, actual_step, rtol=0.01):
+        log.warning(
+            f"Cannot set integer number of steps between "
+            f"{start} and {stop} with {step} step sizes. "
+            f"Changing the step size from {step} to {actual_step}"
+        )
+
+    return set_points
+
 
 def sweep(
         parameter: Union[Parameter, SweepFunction],
-        set_points: Iterator=None,
-        start: float=None,
-        step: float=None,
-        stop: float=None,
+        set_points: Iterator = None,
+        start: float = None,
+        step: float = None,
+        step_count: int = None,
+        stop: float = None,
         paramtype: str = None
 ) -> BaseSweepObject:
     """
@@ -34,14 +70,9 @@ def sweep(
         )
 
     if set_points is None:
-
-        if any([i is None for i in [start, stop, step]]):
-            raise ValueError(
-                "If the set points iterator is None then start, stop and "
-                "step values are mandatory"
-            )
-
-        set_points = np.arange(start, stop + step, step)
+        set_points = make_setpoints_iterator(
+            start, step, step_count, stop
+        )
 
     if not callable(set_points):
         sweep_object = Sweep(fun, fun.parameter_table, lambda: set_points)
