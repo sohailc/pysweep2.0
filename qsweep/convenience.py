@@ -10,6 +10,7 @@ from qsweep.decorators import (
 )
 
 log = logging.getLogger()
+log.setLevel(logging.INFO)
 
 
 def make_setpoints_array(
@@ -52,7 +53,7 @@ def make_setpoints_array(
         )
 
     if step_count is None:
-        step_count = int(np.round((stop_value - start_value) / step_value))
+        step_count = int(np.round((stop_value - start_value) / step_value)) + 1
 
     set_points, actual_step = np.linspace(
         start_value, stop_value, step_count, retstep=True
@@ -72,14 +73,35 @@ def sweep(
         parameter: Union[Parameter, SweepFunction],
         set_points: Iterator = None,
         start: float = None,
+        stop: float = None,
         step: float = None,
         step_count: int = None,
-        stop: float = None,
         paramtype: str = None
 ) -> BaseSweepObject:
     """
-    Sweep a parameters or function over a set of points (given by the `set_points`
-    iterator) or from a `start_value` to a `stop_value` with steps of `step_value`.
+    Create a sweep object which sweeps the given parameter.
+
+    Args:
+        parameter: The parameter to sweep
+        set_points: The set point values to sweep over.
+            If the set points are not given, the start,
+            stop and step or step_count values are needed.
+        start: The start value of the sweep
+            This value is required if a set point iterator is not provided
+        stop: The stop value of the sweep
+            This value is required if a set point iterator is not provided
+        step: The step size of the sweep.
+            If the set point iterator is not provided, we either need this
+            value or a value for `step_count`. Please note that there need
+            to fit an integer number of steps between the start and stop values.
+            If this is not the case, we round of to the nearest integer number
+            of steps and issue a warning that the step_value has changed.
+        step_count: the number of step in the sweep.
+            If the set point iterator is not provided, we either need this
+            value or a value for `step`.
+        paramtype: ['array', 'numeric', 'text', 'complex']
+            The type of parameter which is being swept. The default value
+            is 'numeric'
     """
 
     if isinstance(parameter, Parameter):
