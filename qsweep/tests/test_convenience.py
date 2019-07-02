@@ -1,9 +1,8 @@
-import numpy
 import pytest
 
 from qcodes import Parameter
 
-from qsweep.convenience import sweep, measure, nest, chain
+from qsweep.convenience import sweep, measure
 from qsweep.decorators import getter, setter
 
 from ._test_tools import Factory

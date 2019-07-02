@@ -1,5 +1,5 @@
 from typing import Union, Iterator
-
+import logging
 import time
 import numpy as np
 
@@ -9,18 +9,99 @@ from qsweep.decorators import (
     parameter_setter, parameter_getter, MeasureFunction, SweepFunction
 )
 
+log = logging.getLogger()
+log.setLevel(logging.INFO)
+
+
+def make_setpoints_array(
+    start_value: float,
+    stop_value: float,
+    step_value: float = None,
+    step_count: int = None
+) -> np.ndarray:
+    """
+    Given start, stop and step_count or step values, return a numpy array
+    with set points values.
+
+    Args:
+        start_value
+        stop_value
+        step_value: The requested size of the steps. If this value
+            has not been given, than `step_count` must be given.
+            Please note that there need to fit an integer number
+            of steps between the start and stop values. If this
+            is not the case, we round of to the nearest integer
+            number of steps and issue a warning that the step_value
+            has changed.
+        step_count: The number of steps between start and stop values.
+            If this value has not been given, then `step_value` must
+            be given.
+    """
+    def _is_none(*lst):
+        return [i is None for i in lst]
+
+    if not any(_is_none(step_value, step_count)):
+        raise ValueError(
+            "Either step or step_count need to be given, "
+            "but not both"
+        )
+
+    if any(_is_none(start_value, stop_value)) or all(_is_none(step_count, step_value)):
+        raise ValueError(
+            "We need both start and stop and one of step "
+            "or step_count"
+        )
+
+    if step_count is None:
+        step_count = int(np.round((stop_value - start_value) / step_value)) + 1
+
+    set_points, actual_step = np.linspace(
+        start_value, stop_value, step_count, retstep=True
+    )
+
+    if step_value is not None and not np.isclose(step_value, actual_step, rtol=0.01):
+        log.warning(
+            f"Cannot set integer number of steps between "
+            f"{start_value} and {stop_value} with {step_value} step sizes. "
+            f"Changing the step size from {step_value} to {actual_step}"
+        )
+
+    return set_points
+
 
 def sweep(
         parameter: Union[Parameter, SweepFunction],
-        set_points: Iterator=None,
-        start: float=None,
-        step: float=None,
-        stop: float=None,
+        set_points: Iterator = None,
+        start: float = None,
+        stop: float = None,
+        step: float = None,
+        step_count: int = None,
         paramtype: str = None
 ) -> BaseSweepObject:
     """
-    Sweep a parameters or function over a set of points (given by the `set_points`
-    iterator) or from a `start_value` to a `stop_value` with steps of `step_value`.
+    Create a sweep object which sweeps the given parameter.
+
+    Args:
+        parameter: The parameter to sweep
+        set_points: The set point values to sweep over.
+            If the set points are not given, the start,
+            stop and step or step_count values are needed.
+        start: The start value of the sweep
+            This value is required if a set point iterator is not provided
+        stop: The stop value of the sweep
+            This value is required if a set point iterator is not provided
+        step: The step size of the sweep.
+            If the set point iterator is not provided, we either need this
+            value or a value for `step_count`. Please note that there need
+            to fit an integer number of steps between the start and stop values.
+            If this is not the case, we round of to the nearest integer number
+            of steps and issue a warning that the step_value has changed.
+        step_count: the number of step in the sweep.
+            If the set point iterator is not provided, we either need this
+            value or a value for `step`.
+        paramtype: ['array', 'numeric', 'text', 'complex']
+            The type of parameter which is being swept. The default value
+            is 'numeric'
     """
 
     if isinstance(parameter, Parameter):
@@ -34,14 +115,9 @@ def sweep(
         )
 
     if set_points is None:
-
-        if any([i is None for i in [start, stop, step]]):
-            raise ValueError(
-                "If the set points iterator is None then start, stop and "
-                "step values are mandatory"
-            )
-
-        set_points = np.arange(start, stop + step, step)
+        set_points = make_setpoints_array(
+            start, step, step_count, stop
+        )
 
     if not callable(set_points):
         sweep_object = Sweep(fun, fun.parameter_table, lambda: set_points)
