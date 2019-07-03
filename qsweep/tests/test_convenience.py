@@ -1,4 +1,5 @@
 import pytest
+import numpy as np
 
 from qcodes import Parameter
 
@@ -33,6 +34,17 @@ def test_sanity_sweep_parameter(parameters):
     p = parameters["p"]
     values = [0, 1, 2]
     so = sweep(p, values)
+    assert list(so) == [{"p": value} for value in values]
+    assert 'numeric' == so.parameter_table.param_specs[0].type
+
+
+def test_sanity_sweep_parameter_w_step_count(parameters):
+    p = parameters["p"]
+    start = 1
+    stop = 3
+    step_count = 10
+    values = np.linspace(start, stop, step_count)
+    so = sweep(p, start=start, stop=stop, step_count=step_count)
     assert list(so) == [{"p": value} for value in values]
     assert 'numeric' == so.parameter_table.param_specs[0].type
 
