@@ -13,8 +13,8 @@ from qsweep.convenience import make_setpoints_array
 )
 def test_sanity(start_value, stop_value, step_count):
     array = make_setpoints_array(
-        start_value=start_value,
-        stop_value=stop_value,
+        start=start_value,
+        stop=stop_value,
         step_count=step_count
     )
 
@@ -35,8 +35,8 @@ def test_inputs():
         match="We need both start and stop"
     ):
         make_setpoints_array(
-            start_value=0,
-            stop_value=1,
+            start=0,
+            stop=1,
         )
 
     with pytest.raises(
@@ -44,9 +44,9 @@ def test_inputs():
         match="Either step or step_count need"
     ):
         make_setpoints_array(
-            start_value=0,
-            stop_value=1,
-            step_value=0.1,
+            start=0,
+            stop=1,
+            step=0.1,
             step_count=10
         )
 
@@ -69,9 +69,9 @@ def test_step_size(args):
     step_size = (stop_value - start_value) / (step_count - 1)
 
     array = make_setpoints_array(
-        start_value=start_value,
-        stop_value=stop_value,
-        step_value=step_size
+        start=start_value,
+        stop=stop_value,
+        step=step_size
     )
 
     actual_step_size = np.mean(np.diff(array))
@@ -92,9 +92,9 @@ def test_steps_warning(caplog):
 
     with caplog.at_level(logging.INFO):
         make_setpoints_array(
-            start_value=start_value,
-            stop_value=stop_value,
-            step_value=step_value
+            start=start_value,
+            stop=stop_value,
+            step=step_value
         )
 
         messages = [record.message for record in caplog.records]
