@@ -31,4 +31,4 @@ def test_register_sweep(parameters):
             datasaver.add_result(*data.items())
 
     data = datasaver.dataset.get_data(p)
-    assert data == [[i/10] for i in range(0, 10)]
+    assert data == [[i/10] for i in range(0, 11)]

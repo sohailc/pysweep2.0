@@ -47,22 +47,22 @@ def _generate_tables(names_units: Iterable[Tuple]) ->List[ParamTable]:
     param_tables = []
 
     for name_unit in names_units:
-        name = name_unit[0]
-        unit = name_unit[1]
 
-        if len(name_unit) > 2:
-            paramtype = name_unit[2]
-        else:
-            paramtype = 'numeric'
+        param_spec_args = {
+            "paramtype": "numeric",
+            "label": name_unit[0]
+        }
+
+        param_spec_args.update({
+            key: value for key, value in zip(
+                ["name", "unit", "paramtype", "label"],
+                name_unit,
+            )
+        })
 
         param_tables.append(
             ParamTable([
-                ParamSpec(
-                    name=name,
-                    paramtype=paramtype,
-                    unit=unit,
-                    label=name
-                )
+                ParamSpec(**param_spec_args)
             ])
         )
 
@@ -218,16 +218,16 @@ def hardsweep(ind: List[Tuple], dep: List[Tuple]) ->Callable:
 
 
 def parameter_setter(parameter, paramtype: str = None):
-    if paramtype:
-        names_units = (parameter.full_name, parameter.unit, paramtype)
-    else:
-        names_units = (parameter.full_name, parameter.unit)
+
+    paramtype = paramtype or "numeric"
+    names_units = (parameter.full_name, parameter.unit, paramtype, parameter.label)
+
     return setter(names_units)(parameter.set)
 
 
 def parameter_getter(parameter, paramtype: str = None):
-    if paramtype:
-        names_units = (parameter.full_name, parameter.unit, paramtype)
-    else:
-        names_units = (parameter.full_name, parameter.unit)
+
+    paramtype = paramtype or "numeric"
+    names_units = (parameter.full_name, parameter.unit, paramtype, parameter.label)
+
     return getter(names_units)(parameter.get)

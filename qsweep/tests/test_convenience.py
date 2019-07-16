@@ -38,6 +38,16 @@ def test_sanity_sweep_parameter(parameters):
     assert 'numeric' == so.parameter_table.param_specs[0].type
 
 
+def test_label(parameters):
+    p = parameters["p"]
+    p.label = "my cool label"
+    values = [0, 1, 2]
+    so = sweep(p, values)
+    assert list(so) == [{"p": value} for value in values]
+    assert 'numeric' == so.parameter_table.param_specs[0].type
+    assert "my cool label" == so.parameter_table.param_specs[0].label
+
+
 def test_sanity_sweep_parameter_w_step_count(parameters):
     p = parameters["p"]
     start = 1
