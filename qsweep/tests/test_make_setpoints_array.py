@@ -46,7 +46,7 @@ def test_inputs():
         make_setpoints_array(
             start=0,
             stop=1,
-            step=0.1,
+            step_size=0.1,
             step_count=10
         )
 
@@ -71,7 +71,7 @@ def test_step_size(args):
     array = make_setpoints_array(
         start=start_value,
         stop=stop_value,
-        step=step_size
+        step_size=step_size
     )
 
     actual_step_size = np.mean(np.diff(array))
@@ -94,7 +94,7 @@ def test_steps_warning(caplog):
         make_setpoints_array(
             start=start_value,
             stop=stop_value,
-            step=step_value
+            step_size=step_value
         )
 
         messages = [record.message for record in caplog.records]

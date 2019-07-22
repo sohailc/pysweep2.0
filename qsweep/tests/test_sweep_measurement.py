@@ -22,7 +22,7 @@ def parameters():
 def test_register_sweep(parameters):
 
     p = parameters["p"]
-    sweep_object = sweep(p, start=0, stop=1, step=0.1)
+    sweep_object = sweep(p, start=0, stop=1, step_size=0.1)
     measurement = SweepMeasurement()
     measurement.register_sweep(sweep_object)
 

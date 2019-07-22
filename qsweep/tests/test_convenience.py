@@ -1,5 +1,6 @@
 import pytest
 import numpy as np
+import time
 
 from qcodes import Parameter
 
@@ -62,7 +63,7 @@ def test_sanity_sweep_parameter_w_step_count(parameters):
 def test_sweep_parameter_with_paramtype(parameters):
     p = parameters["p"]
     values = [0, 1, 2]
-    so = sweep(p, values, paramtype='array')
+    so = sweep(p, values, parameter_type='array')
     assert list(so) == [{"p": value} for value in values]
     assert 'array' == so.parameter_table.param_specs[0].type
 
@@ -123,3 +124,23 @@ def test_error():
     with pytest.raises(ValueError):
         sweep(no_good_setter, [0, 1])
 
+
+def test_delay(parameters):
+
+    p = parameters["p"]
+
+    n_values = 5
+    step_delay = 1.45
+
+    values = np.arange(n_values)
+
+    times = np.array([
+        time.perf_counter()
+        for _ in sweep(p, values, step_delay=step_delay)
+    ])
+
+    assert np.allclose(
+        np.diff(times),
+        (n_values - 1) * [step_delay],
+        atol=1E-2
+    )

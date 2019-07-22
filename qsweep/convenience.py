@@ -16,7 +16,7 @@ log.setLevel(logging.INFO)
 def make_setpoints_array(
     start: float,
     stop: float,
-    step: float = None,
+    step_size: float = None,
     step_count: int = None
 ) -> np.ndarray:
     """
@@ -26,7 +26,7 @@ def make_setpoints_array(
     Args:
         start
         stop
-        step: The requested size of the steps. If this value
+        step_size: The requested size of the steps. If this value
             has not been given, than `step_count` must be given.
             Please note that there need to fit an integer number
             of steps between the start and stop values. If this
@@ -40,30 +40,30 @@ def make_setpoints_array(
     def _is_none(*lst):
         return [i is None for i in lst]
 
-    if not any(_is_none(step, step_count)):
+    if not any(_is_none(step_size, step_count)):
         raise ValueError(
             "Either step or step_count need to be given, "
             "but not both"
         )
 
-    if any(_is_none(start, stop)) or all(_is_none(step_count, step)):
+    if any(_is_none(start, stop)) or all(_is_none(step_count, step_size)):
         raise ValueError(
             "We need both start and stop and one of step "
             "or step_count"
         )
 
     if step_count is None:
-        step_count = int(np.round((stop - start) / step)) + 1
+        step_count = int(np.round((stop - start) / step_size)) + 1
 
     set_points, actual_step = np.linspace(
         start, stop, step_count, retstep=True
     )
 
-    if step is not None and not np.isclose(step, actual_step, rtol=0.01):
+    if step_size is not None and not np.isclose(step_size, actual_step, rtol=0.01):
         log.warning(
             f"Cannot set integer number of steps between "
-            f"{start} and {stop} with {step} step sizes. "
-            f"Changing the step size from {step} to {actual_step}"
+            f"{start} and {stop} with {step_size} step sizes. "
+            f"Changing the step size from {step_size} to {actual_step}"
         )
 
     return set_points
@@ -74,9 +74,10 @@ def sweep(
         set_points: Iterator = None,
         start: float = None,
         stop: float = None,
-        step: float = None,
+        step_size: float = None,
         step_count: int = None,
-        paramtype: str = None
+        step_delay: float = 0,
+        parameter_type: str = None
 ) -> BaseSweepObject:
     """
     Create a sweep object which sweeps the given parameter.
@@ -90,7 +91,7 @@ def sweep(
             This value is required if a set point iterator is not provided
         stop: The stop value of the sweep
             This value is required if a set point iterator is not provided
-        step: The step size of the sweep.
+        step_size: The step size of the sweep.
             If the set point iterator is not provided, we either need this
             value or a value for `step_count`. Please note that there need
             to fit an integer number of steps between the start and stop values.
@@ -99,13 +100,14 @@ def sweep(
         step_count: the number of step in the sweep.
             If the set point iterator is not provided, we either need this
             value or a value for `step`.
-        paramtype: ['array', 'numeric', 'text', 'complex']
+        step_delay: At each iteration, wait for the specified number of seconds
+        parameter_type: ['array', 'numeric', 'text', 'complex']
             The type of parameter which is being swept. The default value
             is 'numeric'
     """
 
     if isinstance(parameter, Parameter):
-        fun = parameter_setter(parameter, paramtype=paramtype)
+        fun = parameter_setter(parameter, paramtype=parameter_type)
     elif isinstance(parameter, SweepFunction):
         fun = parameter
     else:
@@ -116,13 +118,15 @@ def sweep(
 
     if set_points is None:
         set_points = make_setpoints_array(
-            start, stop, step, step_count
+            start, stop, step_size, step_count
         )
 
     if not callable(set_points):
         sweep_object = Sweep(fun, fun.parameter_table, lambda: set_points)
     else:
         sweep_object = Sweep(fun, fun.parameter_table, set_points)
+
+    sweep_object.add_post_step(lambda: time.sleep(step_delay))
 
     return sweep_object
 
@@ -138,33 +142,6 @@ def measure(fun_or_param, paramtype: str = None):
                          "decorated with pytopo.getter")
 
     return Measure(fun, fun.parameter_table)
-
-
-def time_trace(interval_time, total_time=None, stop_condition=None):
-
-    start_time = None   # Set when we call "generator_function"
-
-    if total_time is None:
-        if stop_condition is None:
-            raise ValueError("Either specify the total time or the stop "
-                             "condition")
-
-    else:
-        def stop_condition():
-            global start_time
-            return time.time() - start_time > total_time
-
-    def generator_function():
-        global start_time
-        start_time = time.time()
-        while not stop_condition():
-            yield time.time() - start_time
-            time.sleep(interval_time)
-
-    time_parameter = Parameter(
-        name="time", unit="s", set_cmd=None, get_cmd=None)
-
-    return sweep(time_parameter, generator_function)
 
 
 def szip(*sweep_objects):
