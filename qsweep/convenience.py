@@ -1,4 +1,4 @@
-from typing import Union, Iterator
+from typing import Union, Iterator, cast
 import logging
 import time
 import numpy as np
@@ -154,4 +154,31 @@ def nest(*sweep_objects):
 
 def chain(*sweep_objects):
     return Chain(*sweep_objects)
+
+
+def time_trace(interval_time, total_time=None, stop_condition=None):
+
+    start_time = None   # Set when we call "generator_function"
+
+    if total_time is None:
+        if stop_condition is None:
+            raise ValueError("Either specify the total time or the stop "
+                             "condition")
+
+    else:
+        def stop_condition():
+            global start_time
+            return time.time() - start_time > total_time
+
+    def generator_function():
+        global start_time
+        start_time = time.time()
+        while not stop_condition():
+            yield time.time() - start_time
+            time.sleep(interval_time)
+
+    time_parameter = Parameter(
+        name="time", unit="s", set_cmd=None, get_cmd=None)
+
+    return sweep(time_parameter, cast(Iterator, generator_function))
 
